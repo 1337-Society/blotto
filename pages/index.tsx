@@ -68,7 +68,6 @@ Crystal Expanse
 export const battles: BattleProps[] = [
     {
         title: 'The Capital',
-        art: "/images/dao_maximalist_The_battle_of_Stormhold_Citadel_7e9d32ca-5495-48bf-938d-972a08f04b8f.png",
         text: 'Before you rise the spires of the capital city of the Imperium. Yours if you can rally the charge.',
         art: "/images/the_capitol.png",
         href: 'https://wikipedia.com/famous_battle',
