@@ -1,6 +1,5 @@
-
-export const chainName = 'junotestnet';
-export const stakingDenom = 'ujuno';
-export const feeDenom = 'ujuno';
-export const cw20ContractAddress = 'juno1j0a9ymgngasfn3l5me8qpd53l5zlm9wurfdk7r65s5mg6tkxal3qpgf5se'
-
+export const chainName = "junotestnet";
+export const stakingDenom = "ujunox";
+export const feeDenom = "ujunox";
+export const blottoContractAddress =
+  "juno1hzmwmtk7cpqrdyw6f42ywg067y49ede8jgwc4lcm32hx2hj4t28s7hu7yc";
