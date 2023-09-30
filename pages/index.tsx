@@ -1,5 +1,7 @@
 "use client";
 
+import React, { useState, useEffect } from 'react';
+
 import Head from "next/head";
 
 import { LinkIcon } from "@chakra-ui/icons";
@@ -34,23 +36,30 @@ import { useChain } from "@cosmos-kit/react";
 // export default Home
 
 export default function Home() {
-  const { address, getCosmWasmClient, getSigningCosmWasmClient } =
-    useChain(chainName);
 
-  let client = getCosmWasmClient().then(async (cli) => {
-    let config = await cli.queryContractSmart(blottoContractAddress, {
-      config: {},
-    });
+  const [battlefields, setBattlefields] = useState([]);
 
-    let armies = await cli.queryContractSmart(blottoContractAddress, {
-      armies: {},
-    });
+  const { address, getCosmWasmClient, getSigningCosmWasmClient } = useChain(chainName);
 
-    let battlefields = await cli.queryContractSmart(blottoContractAddress, {
-      battlefields: {},
+  useEffect(() => {
+
+    if(battlefields.length) return // @todo error: this is being called more than once???
+
+    let client = getCosmWasmClient().then(async (cli) => {
+      let config = await cli.queryContractSmart(blottoContractAddress, {
+        config: {},
+      });
+
+      let armies = await cli.queryContractSmart(blottoContractAddress, {
+        armies: {},
+      });
+
+      let battlefields2 = await cli.queryContractSmart(blottoContractAddress, {
+        battlefields: {},
+      });
+      setBattlefields(battlefields2)
     });
-    console.log(armies, battlefields, config);
-  });
+  })
 
   return (
     <Container maxW="3xl" py={10}>
@@ -63,7 +72,7 @@ export default function Home() {
       <NavBar></NavBar>
       <br />
 
-      <Battles></Battles>
+      <Battles battlefields={battlefields}></Battles>
 
       <Stack
         isInline={true}

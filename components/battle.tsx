@@ -90,6 +90,7 @@ export const Battle = ({ title, text, art, href, value }: BattleProps) => {
   );
 };
 
+/*
 export const battles: BattleProps[] = [
     {
         title: 'The Capital',
@@ -141,13 +142,26 @@ export const battles: BattleProps[] = [
         value: 7,
     },
 ]
+*/
 
+export const Battles = ({battlefields}) => {
 
-export const Battles = ({ title, text, art, href, value }: BattleProps) => {
+    let b = []
+    battlefields.forEach(entry=>{
+        let scratch = {
+            id: entry.id,
+            title: entry.name,
+            art: entry.ipfs_uri,
+            value: entry.value,
+            winner: null
+        }
+        b.push(scratch)
+    })
+
     return (
         <Center>
         <VStack>
-            {battles.map((entry) => (
+            {b.map((entry) => (
                 <Battle key={entry.title} {...entry}></Battle>
             ))}
         </VStack>
