@@ -31,7 +31,6 @@ import {
   RejectedWarn,
   WalletConnectComponent,
   ChainCard,
-  handleChangeColorModeValue,
   HackCw20,
 } from '../components';
 
