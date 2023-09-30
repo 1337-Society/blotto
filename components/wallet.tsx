@@ -1,4 +1,8 @@
-import { useChain, useManager } from '@cosmos-kit/react';
+
+import { useState } from 'react';
+import { MouseEventHandler } from 'react';
+import { FiAlertTriangle } from 'react-icons/fi';
+
 import {
   Box,
   Center,
@@ -9,10 +13,11 @@ import {
   useColorModeValue,
   Text,
 } from '@chakra-ui/react';
-import { MouseEventHandler } from 'react';
-import { FiAlertTriangle } from 'react-icons/fi';
+
+import { WalletStatus } from '@cosmos-kit/core';
+import { useChain, useManager } from '@cosmos-kit/react';
+
 import {
-  Astronaut,
   Error,
   Connected,
   ConnectedShowAddress,
@@ -26,8 +31,45 @@ import {
   RejectedWarn,
   WalletConnectComponent,
   ChainCard,
+  handleChangeColorModeValue,
+  HackCw20,
 } from '../components';
-import { chainName } from '../config';
+
+import { chainName, cw20ContractAddress } from '../config';
+import { ContractsProvider, useContracts } from '../codegen/contracts-context';
+
+const ContractComponent = ({ children }: { children: any }) => {
+  const { address, getCosmWasmClient, getSigningCosmWasmClient } = useChain(chainName);
+  return (
+    <ContractsProvider contractsConfig={{
+      address,
+      getCosmWasmClient,
+      getSigningCosmWasmClient
+    }}>
+      {children}
+    </ContractsProvider>
+  );
+};
+
+const RenderBalance = () => {
+  const { hackCw20 } = useContracts();
+  const { address, status } = useChain(chainName);
+  const [cw20Bal, setCw20Bal] = useState<string | null>(null);
+
+  if (status === 'Connected' && hackCw20.cosmWasmClient) {
+    const client = hackCw20.getQueryClient(cw20ContractAddress);
+    client.balance({ address }).then((b) => setCw20Bal(b.balance));
+  }
+
+  return (
+    <Box w="full" maxW="md" mx="auto">
+      <HackCw20
+        balance={cw20Bal}
+        isConnectWallet={status !== WalletStatus.Disconnected}
+      />
+    </Box>
+  );
+}
 
 export const WalletSection = () => {
   const {
@@ -61,7 +103,19 @@ export const WalletSection = () => {
   };
 
   // Components
-  const connectWalletButton = (
+
+  const userInfo = username && (
+    <ConnectedUserInfo username={username} />
+  );
+
+  const addressBtn = (
+    <CopyAddressBtn
+      walletStatus={status}
+      connected={<ConnectedShowAddress address={address} isLoading={false} />}
+    />
+  );
+
+  const WalletButton = (
     <WalletConnectComponent
       walletStatus={status}
       disconnect={
@@ -79,7 +133,7 @@ export const WalletSection = () => {
     />
   );
 
-  const connectWalletWarn = (
+  const WalletWarn = (
     <ConnectStatusWarn
       walletStatus={status}
       rejected={
@@ -97,55 +151,16 @@ export const WalletSection = () => {
     />
   );
 
-  const userInfo = username && (
-    <ConnectedUserInfo username={username} icon={<Astronaut />} />
-  );
-  const addressBtn = (
-    <CopyAddressBtn
-      walletStatus={status}
-      connected={<ConnectedShowAddress address={address} isLoading={false} />}
-    />
-  );
-
   return (
-    <Center py={16}>
-      <Grid
-        w="full"
-        maxW="sm"
-        templateColumns="1fr"
-        rowGap={4}
-        alignItems="center"
-        justifyContent="center"
-      >
-        <GridItem marginBottom={'20px'}>
-          <ChainCard
-            prettyName={chain?.label || chainName}
-            icon={chain?.icon}
-          />
-        </GridItem>
-        <GridItem px={6}>
-          <Stack
-            justifyContent="center"
-            alignItems="center"
-            borderRadius="lg"
-            bg={useColorModeValue('white', 'blackAlpha.400')}
-            boxShadow={useColorModeValue(
-              '0 0 2px #dfdfdf, 0 0 6px -2px #d3d3d3',
-              '0 0 2px #363636, 0 0 8px -2px #4f4f4f'
-            )}
-            spacing={4}
-            px={4}
-            py={{ base: 6, md: 12 }}
-          >
-            {userInfo}
-            {addressBtn}
-            <Box w="full" maxW={{ base: 52, md: 64 }}>
-              {connectWalletButton}
-            </Box>
-            {connectWalletWarn && <GridItem>{connectWalletWarn}</GridItem>}
-          </Stack>
-        </GridItem>
-      </Grid>
-    </Center>
+      <ContractComponent>
+        <Stack justifyContent="center" alignItems="center">
+          {userInfo}
+          {addressBtn}
+         <Box w="full" maxW={{ base: 52, md: 64 }}>
+            {WalletButton}
+          </Box>
+          {WalletWarn}
+        </Stack>
+      </ContractComponent>
   );
 };

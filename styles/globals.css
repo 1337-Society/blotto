@@ -18,6 +18,22 @@ a {
   box-sizing: border-box;
 }
 
+header {
+  position: sticky;
+  top: 0;
+  z-index: 99;
+  background: #222;
+  display: flex;
+  flex-direction: row;
+  justify-content: space-around;
+  align-items: center;
+  font-weight: 900;
+  font-size: 1em;
+  padding: 20px 10px;
+  margin: -2px;
+  flex-wrap: wrap;
+}
+
 @media (prefers-color-scheme: dark) {
   html {
     color-scheme: dark;
@@ -27,12 +43,3 @@ a {
     background: black;
   }
 }
-
-h1 {
-  font-family: 'Kablammo', cursive;
-}
-
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-

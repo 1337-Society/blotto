@@ -8,28 +8,32 @@ First, install the packages and run the development server:
 yarn && yarn dev
 ```
 
-## DESIGN TODO
+## UX
 
-- test
+	? chakra ui overrides colorMode and doesn't seem to listen to theme.js settings
 
-- art
-  - logo title
-  - get all the venues and all the art
-  - put a pretty tug of war style art iconography on progress
-  - would be fun to have some stats
+	- test progress bar
 
-- simple
-  - test progress bar at 0 and 100%
-  - make the progress bar actually alive
+	- test really talking to the system
 
-- contract interaction
-  - make stake do something
+	- nav bar should be stickier to the top; not show below
+
+	- the wallet menu is a bit bulky visually
+
+	- tug of war art
+
+	- stats on each item
+
+## contract
+
+	- show juno balance
+
   - show where you actually staked stuff
   - reflect the contract state (play, or outcome)
   - show the actual live number of soldiers per battle
   - withdraw button for outcome page
 
-
+## layout
 
 
 main page prior to game
