@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 
 import Head from "next/head";
 
@@ -29,37 +29,39 @@ import {
 import { NavBar } from "../components/navbar";
 import { chainName, blottoContractAddress } from "../config/defaults";
 import { Battles } from "../components/battle";
-import { useChain } from "@cosmos-kit/react";
+import { useChain, useWallet } from "@cosmos-kit/react";
+import { useContracts } from "../codegen/contracts-context";
+import { BlottoClient, BlottoQueryClient } from "../codegen/Blotto.client";
+import { Army, Battlefield, Config } from "../codegen/Blotto.types";
 
 // testing the cosmwasm demo
 // import { Home } from '../components/test'
 // export default Home
 
 export default function Home() {
+  const [armies, setArmies] = useState<Army[]>([]);
+  const [battlefields, setBattlefields] = useState<Battlefield[]>([]);
+  const [config, setConfig] = useState<Config>();
 
-  const [battlefields, setBattlefields] = useState([]);
-
-  const { address, getCosmWasmClient, getSigningCosmWasmClient } = useChain(chainName);
+  const { getCosmWasmClient } = useChain(chainName);
 
   useEffect(() => {
+    if (battlefields.length) return; // @todo error: this is being called more than once???
 
-    if(battlefields.length) return // @todo error: this is being called more than once???
+    let getData = async () => {
+      // Get a query client
+      let cli = await getCosmWasmClient();
 
-    let client = getCosmWasmClient().then(async (cli) => {
-      let config = await cli.queryContractSmart(blottoContractAddress, {
-        config: {},
-      });
+      // Construct a query client with nice type completions
+      let blotto = new BlottoQueryClient(cli, blottoContractAddress);
 
-      let armies = await cli.queryContractSmart(blottoContractAddress, {
-        armies: {},
-      });
+      setArmies(await blotto.armies());
+      setBattlefields(await blotto.battlefields());
+      setConfig(await blotto.config());
+    };
 
-      let battlefields2 = await cli.queryContractSmart(blottoContractAddress, {
-        battlefields: {},
-      });
-      setBattlefields(battlefields2)
-    });
-  })
+    getData();
+  }, []);
 
   return (
     <Container maxW="3xl" py={10}>
