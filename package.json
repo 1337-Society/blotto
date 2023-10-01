@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "codegen": "cosmwasm-ts-codegen generate --plugin client --plugin react-query --plugin message-builder --plugin provider --schema ./contracts/cw-blotto/schema --out ./codegen --name Blotto --optionalClient --version v4 --mutations"
   },
   "dependencies": {
     "@chakra-ui/icons": "2.0.12",
@@ -28,6 +29,7 @@
     "react-icons": "4.6.0"
   },
   "devDependencies": {
+    "@cosmwasm/ts-codegen": "0.35.3",
     "@types/node": "18.11.9",
     "@types/react": "18.0.25",
     "@types/react-dom": "18.0.9",
