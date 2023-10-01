@@ -46,7 +46,7 @@ const BattleBar = () => {
   );
 }
 
-const BattleCard = (args) => {
+const BattleCard = (args:any) => {
 
   const battle: Battlefield = args.battle
   console.log(battle)
@@ -75,7 +75,6 @@ const BattleCard = (args) => {
         <CardBody>
           <Heading size='md'>{battle.name || ""}</Heading>
           <Text py='3'>Victory points: {battle.value || 0}</Text>
-          <Text py='2'>{battle.text || ""}</Text>
         </CardBody>
 
         <CardBody>
@@ -94,15 +93,13 @@ const BattleCard = (args) => {
       <Image
         objectFit='cover'
         maxW={{ base: '100%', sm: '200px' }}
-        src={battle.ipfs_uri}
-        alt={battle.name}
+        src={battle.ipfs_uri || ""}
+        alt={battle.name || ""}
       />
 
     </Card>
   );
 };
-
-const useMountEffect = (fun) => useEffect(fun, [])
 
 
 export default function Home() {
@@ -112,7 +109,7 @@ export default function Home() {
 
   const { getCosmWasmClient } = useChain(chainName);
 
-  useMountEffect(() => {
+  useEffect(() => {
 
     let getData = async () => {
       // Get a query client
@@ -134,7 +131,7 @@ export default function Home() {
     };
 
     getData();
-  });
+  },[]);
 
   return (
     <Container maxW="3xl" py={10}>

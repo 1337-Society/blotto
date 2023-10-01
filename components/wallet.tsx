@@ -34,7 +34,7 @@ import {
   HackCw20,
 } from '../components';
 
-import { chainName, cw20ContractAddress } from '../config';
+import { chainName } from '../config';
 import { ContractsProvider, useContracts } from '../codegen/contracts-context';
 
 const ContractComponent = ({ children }: { children: any }) => {
@@ -49,26 +49,6 @@ const ContractComponent = ({ children }: { children: any }) => {
     </ContractsProvider>
   );
 };
-
-const RenderBalance = () => {
-  const { hackCw20 } = useContracts();
-  const { address, status } = useChain(chainName);
-  const [cw20Bal, setCw20Bal] = useState<string | null>(null);
-
-  if (status === 'Connected' && hackCw20.cosmWasmClient) {
-    const client = hackCw20.getQueryClient(cw20ContractAddress);
-    client.balance({ address }).then((b) => setCw20Bal(b.balance));
-  }
-
-  return (
-    <Box w="full" maxW="md" mx="auto">
-      <HackCw20
-        balance={cw20Bal}
-        isConnectWallet={status !== WalletStatus.Disconnected}
-      />
-    </Box>
-  );
-}
 
 export const WalletSection = () => {
   const {
