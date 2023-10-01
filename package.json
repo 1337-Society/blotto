@@ -21,6 +21,7 @@
     "@cosmos-kit/react": "^2.8.4",
     "@emotion/react": "11.10.6",
     "@emotion/styled": "11.10.6",
+    "@tanstack/react-query": "^4.35.7",
     "chain-registry": "1.20.0",
     "framer-motion": "9.0.7",
     "next": "12.2.5",
