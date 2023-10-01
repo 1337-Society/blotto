@@ -34,9 +34,7 @@ import { useContracts } from "../codegen/contracts-context";
 import { BlottoClient, BlottoQueryClient } from "../codegen/Blotto.client";
 import { Army, Battlefield, Config } from "../codegen/Blotto.types";
 
-// testing the cosmwasm demo
-// import { Home } from '../components/test'
-// export default Home
+const useMountEffect = (fun) => useEffect(fun, [])
 
 export default function Home() {
   const [armies, setArmies] = useState<Army[]>([]);
@@ -45,8 +43,7 @@ export default function Home() {
 
   const { getCosmWasmClient } = useChain(chainName);
 
-  useEffect(() => {
-    if (battlefields.length) return; // @todo error: this is being called more than once???
+  useMountEffect(() => {
 
     let getData = async () => {
       // Get a query client
@@ -61,7 +58,7 @@ export default function Home() {
     };
 
     getData();
-  }, []);
+  });
 
   return (
     <Container maxW="3xl" py={10}>

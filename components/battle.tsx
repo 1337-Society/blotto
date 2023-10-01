@@ -144,7 +144,7 @@ export const battles: BattleProps[] = [
 ]
 */
 
-export const Battles = ({battlefields}) => {
+export const Battles = ({battlefields: BattleProps }) => {
 
     let b = []
     battlefields.forEach(entry=>{
