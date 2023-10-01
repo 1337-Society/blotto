@@ -12,9 +12,7 @@ yarn && yarn dev
 
 	? chakra ui overrides colorMode and doesn't seem to listen to theme.js settings
 
-	- test progress bar
-
-	- test really talking to the system
+	- improve progress bar
 
 	- nav bar should be stickier to the top; not show below
 
@@ -27,7 +25,6 @@ yarn && yarn dev
 ## contract
 
 	- show juno balance
-
   - show where you actually staked stuff
   - reflect the contract state (play, or outcome)
   - show the actual live number of soldiers per battle
