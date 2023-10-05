@@ -1,3 +1,4 @@
+
 import "../styles/globals.css";
 import type { AppProps } from "next/app";
 import { ChainProvider } from "@cosmos-kit/react";
@@ -5,17 +6,38 @@ import { ChakraProvider } from "@chakra-ui/react";
 import { wallets as keplrWallets } from "@cosmos-kit/keplr";
 import { wallets as cosmostationWallets } from "@cosmos-kit/cosmostation";
 import { wallets as leapWallets } from "@cosmos-kit/leap";
+import { GasPrice } from "@cosmjs/stargate";
 
 import { SignerOptions } from "@cosmos-kit/core";
 import { chains, assets } from "chain-registry";
 import { defaultTheme } from "../config";
 import "@interchain-ui/react/styles";
 
+//import { getSigningCosmosClientOptions } from "interchain";
+//import { wallets } from '@cosmos-kit/keplr';
+
 function CreateCosmosApp({ Component, pageProps }: AppProps) {
   const signerOptions: SignerOptions = {
-    // signingStargate: () => {
-    //   return getSigningCosmosClientOptions();
-    // }
+    //signingStargate: (chain: Chain) => {
+    //  return getSigningCosmosClientOptions();
+    //},
+    signingCosmwasm: (chain: any) => {
+      // return corresponding cosmwasm options or undefined
+      switch (chain.chain_name) {
+        case "osmosis":
+          return {
+            gasPrice: GasPrice.fromString("0.0025uosmo"),
+          };
+        case "juno":
+          return {
+            gasPrice: GasPrice.fromString("0.0025ujuno"),
+          };
+        case "junotestnet":
+          return {
+            gasPrice: GasPrice.fromString("0.0025ujuno"),
+          };
+      }
+    },
   };
 
   return (

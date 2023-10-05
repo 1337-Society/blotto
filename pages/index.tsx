@@ -27,13 +27,15 @@ import {
   useColorModeValue,
 } from "@chakra-ui/react";
 
-import { useChain, useWallet } from "@cosmos-kit/react";
-
 import { NavBar } from "../components/navbar";
 
+import { useChain, useWallet } from "@cosmos-kit/react";
+
 import { chainName, blottoContractAddress } from "../config/defaults";
+
+import { ContractsProvider } from '../codegen/contracts-context';
 import { useContracts } from "../codegen/contracts-context";
-import { BlottoClient, BlottoQueryClient } from "../codegen/Blotto.client";
+import { BlottoClient } from "../codegen/Blotto.client";
 import { Army, Battlefield, Config } from "../codegen/Blotto.types";
 
 const BattleBar = () => {
@@ -49,7 +51,26 @@ const BattleBar = () => {
 const BattleCard = (args:any) => {
 
   const battle: Battlefield = args.battle
-  console.log(battle)
+  const blotto: BlottoClient = args.blotto
+
+  // hack - use built in art if none supplied
+  if(!battle.ipfs_uri || !battle.ipfs_uri.length) {
+    battle.ipfs_uri = `/images/${battle.name}.png`
+  }
+
+  const stakeRed = ()=>{
+    // test - @todo must set from config
+    const army_id: any = 1;
+    const battlefield_id: any = 1;
+    blotto.stake(army_id,battlefield_id)
+  }
+
+  const stakeBlue = ()=>{
+    // test - @todo must set from config
+    const army_id: any = 1;
+    const battlefield_id: any = 1;
+    blotto.stake(army_id,battlefield_id)
+  }
 
   return (
     <Card
@@ -84,9 +105,9 @@ const BattleCard = (args:any) => {
         </CardBody>
 
         <CardFooter>
-          <Button variant='solid' colorScheme='red'>Stake Red Soldiers</Button>
+          <Button variant='solid' colorScheme='red' onClick={stakeRed}>Stake Red Soldiers</Button>
           &nbsp;
-          <Button variant='solid' colorScheme='blue'>Stake Blue Soldiers</Button>
+          <Button variant='solid' colorScheme='blue' onClick={stakeBlue}>Stake Blue Soldiers</Button>
         </CardFooter>
       </Stack>
 
@@ -101,40 +122,46 @@ const BattleCard = (args:any) => {
   );
 };
 
+let latch = false
 
 export default function Home() {
   const [armies, setArmies] = useState<Army[]>([]);
   const [battlefields, setBattlefields] = useState<Battlefield[]>([]);
   const [config, setConfig] = useState<Config>();
+  const [blotto, setBlotto] = useState<BlottoClient>();
 
-  const { getCosmWasmClient } = useChain(chainName);
+  // not sure this is useful?
+  // const { wallet } = useWallet()
+
+  // get someting called a context which appears to be something around a current user and a chain
+  const context = useChain(chainName);
 
   useEffect(() => {
-
+    if(latch) return
     let getData = async () => {
-      // Get a query client
-      let cli = await getCosmWasmClient();
 
-      // Construct a query client with nice type completions
-      let blotto = new BlottoQueryClient(cli, blottoContractAddress);
+      let cli : any = null
 
+      cli = context.status != "Connected" ? await context.getCosmWasmClient() : await context.getSigningCosmWasmClient();
+
+      console.log("address:",context.address,"username:",context.username,"connected:",context.status)
+
+      // rather than issuing a useEffect({fn,[]}) once I'd like to have the child components have a connected wallet ...
+      // this is kind of clumsy @todo improve
+      latch = context.address ? true : false
+
+      let blotto = new BlottoClient(cli, context && context.address ? context.address : "invalid", blottoContractAddress );
+      setBlotto(blotto);
       setConfig(await blotto.config());
       setArmies(await blotto.armies());
-
-      // hack - inject some art for now while waiting for pinning services to finish
-      const battlefields = await blotto.battlefields();
-      battlefields.forEach((battle,index)=>{
-        if(battle.ipfs_uri && battle.ipfs_uri.length) return
-        battle.ipfs_uri = `/images/${battle.name}.png`
-      })
-      setBattlefields(battlefields);
+      setBattlefields(await blotto.battlefields());
     };
-
     getData();
-  },[]);
+  });
 
   return (
     <Container maxW="3xl" py={10}>
+
       <Head>
         <title>Blotto</title>
         <meta name="description" content="Blotto on chain" />
@@ -145,11 +172,19 @@ export default function Home() {
       <br />
 
       <Center>
-        <VStack>
-            {battlefields.map((entry) => (
-                <BattleCard key={entry.name} battle={entry}></BattleCard>
-            ))}
-        </VStack>
+        <ContractsProvider
+          contractsConfig={{
+            address:context.address,
+            getCosmWasmClient:context.getCosmWasmClient,
+            getSigningCosmWasmClient:context.getSigningCosmWasmClient,
+          }}
+        >
+          <VStack>
+              {battlefields.map((entry) => (
+                  <BattleCard key={entry.name} battle={entry} blotto={blotto}></BattleCard>
+              ))}
+          </VStack>
+        </ContractsProvider>
       </Center>
 
       <Stack
