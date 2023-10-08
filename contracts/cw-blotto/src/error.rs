@@ -18,6 +18,9 @@ pub enum ContractError {
     #[error("{0}")]
     OverflowErr(#[from] OverflowError),
 
+    #[error("Invalid input: {denom}")]
+    InvalidDenom { denom: String },
+
     #[error(
         "Contract must be instantiated with at least 2 armies (sides) and less that {max_limit}"
     )]

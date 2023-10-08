@@ -4,10 +4,7 @@ use sylvia::cw_multi_test::App as MtApp;
 use sylvia::multitest::App;
 
 use crate::{
-    contract::{
-        multitest_utils::{BlottoContractProxy, CodeId},
-        InstantiateMsgData,
-    },
+    contract::{multitest_utils::CodeId, InstantiateMsgData},
     state::{Army, ArmyInfo, Battlefield, BattlefieldInfo, GamePhase},
     ContractError,
 };
@@ -85,17 +82,15 @@ fn test_instantiate_one_army_fails() {
     // Only one army fails
     let err = code_id
         .instantiate(InstantiateMsgData {
-            armies: vec![
-                ArmyInfo {
-                    name: "red".to_string(),
-                    ipfs_uri: None,
-                },
-                ArmyInfo {
-                    name: "blue".to_string(),
-                    ipfs_uri: None,
-                },
-            ],
-            battlefields: vec![],
+            armies: vec![ArmyInfo {
+                name: "red".to_string(),
+                ipfs_uri: None,
+            }],
+            battlefields: vec![BattlefieldInfo {
+                name: "The Citadel".to_string(),
+                ipfs_uri: None,
+                value: 2,
+            }],
             battle_duration: Timestamp::from_seconds(10000),
             denom: DENOM.to_string(),
         })
@@ -233,14 +228,6 @@ fn test_happy_path() {
     let phase = blotto.status().unwrap().game_phase;
     assert_eq!(phase, GamePhase::Closed);
 
-    // Player one get's to withdraw their balance from winning the battlefield
-    // As well as additional prize winnings
-    let res = blotto.withdraw().call(PLAYER_1).unwrap();
-
-    // Player can't call withdraw twice
-    let err = blotto.withdraw().call(PLAYER_1).unwrap_err();
-    assert_eq!(err, ContractError::NothingToClaim {});
-
     // Player can't stake when game is over
     let err = blotto
         .stake(armies[0].id, battlefields[2].id)
@@ -253,12 +240,32 @@ fn test_happy_path() {
     let err = blotto.withdraw().call(NON_PLAYER).unwrap_err();
     assert_eq!(err, ContractError::NothingToClaim {});
 
-    // assert_eq!("150".to_string(), res.events[1].attributes[2].value)
-    // println!("{:?}", res.events[1].attributes[2].value);
+    // Player one get's to withdraw their 150 balance from winning the battlefield
+    // As well as additional prize winnings
+    let res = blotto.withdraw().call(PLAYER_1).unwrap();
+    assert_eq!("235".to_string(), res.events[1].attributes[2].value);
 
-    // // Player 2 gets nothing
-    // let res = blotto.withdraw().call(PLAYER_2).unwrap();
-    // println!("{:?}", res);
+    // Player can't call withdraw twice
+    let err = blotto.withdraw().call(PLAYER_1).unwrap_err();
+    assert_eq!(err, ContractError::NothingToClaim {});
+
+    // Player 2 gets nothing
+    let res = blotto.withdraw().call(PLAYER_2).unwrap();
+    assert_eq!("0".to_string(), res.events[1].attributes[2].value);
+
+    // Player 3 looses 100 staked on loosing battlefield, but wins prize for
+    // fighting with the winning army
+    let res = blotto.withdraw().call(PLAYER_3).unwrap();
+    assert_eq!("57".to_string(), res.events[1].attributes[2].value);
+
+    // Player 4 gets their 100 stake back plus prize winnings
+    let res = blotto.withdraw().call(PLAYER_4).unwrap();
+    assert_eq!("157".to_string(), res.events[1].attributes[2].value);
+
+    // Player 5 gets 200 back for winning the battlefield, but nothing else
+    // as they fought with the loosing army
+    let res = blotto.withdraw().call(PLAYER_5).unwrap();
+    assert_eq!("200".to_string(), res.events[1].attributes[2].value);
 }
 
 // Handles the edge case where no one plays the game

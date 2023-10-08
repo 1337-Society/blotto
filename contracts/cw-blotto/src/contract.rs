@@ -92,21 +92,28 @@ impl BlottoContract<'_> {
     ) -> Result<Response, ContractError> {
         cw2::set_contract_version(ctx.deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
-        // TODO validate denom
-
-        // // Check that there are at least two armies, and not more than the max limit
-        // if data.armies.len() < 2 || data.armies.len() > ARMY_LIMIT {
-        //     return Err(ContractError::InvalidArmyCount {
-        //         max_limit: ARMY_LIMIT,
-        //     });
+        // // TODO Validate denom
+        // Needs cw-multi-test support in v0.17.0, current sylvia version ships with v0.16.5
+        // let supply: Coin = ctx.deps.querier.query_supply(data.denom.clone())?;
+        // if supply.amount.is_zero() {
+        //     return Err(ContractError::InvalidDenom { denom: data.denom });
         // }
 
-        // // Check there is at least one battlefield and not more than the max limit
-        // if data.battlefields.len() == 0 || data.battlefields.len() > BATTLEFIELD_LIMIT {
-        //     return Err(ContractError::InvalidBattlefieldCount {
-        //         max_limit: BATTLEFIELD_LIMIT,
-        //     });
-        // }
+        // Check that there are at least two armies, and not more than the max limit
+        if (data.armies.len() as u32) < 2 || (data.armies.len() as u32) > ARMY_LIMIT {
+            return Err(ContractError::InvalidArmyCount {
+                max_limit: ARMY_LIMIT,
+            });
+        }
+
+        // Check there is at least one battlefield and not more than the max limit
+        if (data.battlefields.len() as u32) == 0
+            || (data.battlefields.len() as u32) > BATTLEFIELD_LIMIT
+        {
+            return Err(ContractError::InvalidBattlefieldCount {
+                max_limit: BATTLEFIELD_LIMIT,
+            });
+        }
 
         // Initialize armies and set their totals to zero
         let mut i = 0;
@@ -304,15 +311,15 @@ impl BlottoContract<'_> {
 
             // TODO check for tie
 
+            // TODO no unwrap
             // Determine which army won
-            let winner = army_totals.clone()[0];
+            let (winner, dead) = army_totals.split_last().unwrap();
 
             println!("totals {:?}", army_totals);
             println!("winning army: {:?}", winner);
 
-            // TODO fix remove last item
             // Remove winning army from totals, the sum the rest and add it to the prize pool
-            let dead_stake: Uint128 = army_totals.split_off(1).iter().map(|a| a.1).sum();
+            let dead_stake: Uint128 = dead.iter().map(|a| a.1).sum();
             prize_pool = prize_pool.checked_add(dead_stake)?;
 
             println!("DEAD: {:?}", dead_stake);
