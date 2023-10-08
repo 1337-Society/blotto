@@ -18,8 +18,19 @@ pub enum ContractError {
     #[error("{0}")]
     OverflowErr(#[from] OverflowError),
 
+    #[error(
+        "Contract must be instantiated with at least 2 armies (sides) and less that {max_limit}"
+    )]
+    InvalidArmyCount { max_limit: u32 },
+
+    #[error("Contract must be instantiated with at least 1 battlefield and less than {max_limit}")]
+    InvalidBattlefieldCount { max_limit: u32 },
+
     #[error("Army with the ID {id}, was not found.")]
     NoArmy { id: u8 },
+
+    #[error("Nothing to claim.")]
+    NothingToClaim {},
 
     #[error("Game is not in Open Phase")]
     NotOpen {},

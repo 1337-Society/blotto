@@ -73,20 +73,7 @@ pub enum GamePhase {
     Closed,
 }
 
-/*
- * TODO multi-index (battlefield, army, player):
- * - query total staked
- * - query player total staked
- * - query battlefield total staked
- * - query battlefield by army total staked
- * - query army total taked
- * - query player staked on battlefield
- *
- * Once the game finishes:
- * - query withdrawable amount
- */
-
-/// Represents a battle field stake
+/// Represents a battlefield stake
 #[cw_serde]
 pub struct StakeInfo {
     pub amount: Uint128,
