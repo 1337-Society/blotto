@@ -7,7 +7,7 @@ export const ConnectedUserInfo = ({
   icon
 }: ConnectedUserCardType) => {
   return (
-    <Stack spacing={1} alignItems="center">
+    <Stack spacing={1} alignItems="center" >
       {username && (
         <>
           <Box
@@ -23,7 +23,7 @@ export const ConnectedUserInfo = ({
           >
             {icon}
           </Box>
-          <Text fontSize={{ md: 'xl' }} fontWeight="semibold">
+          <Text fontSize={{ md: 'xl' }} fontWeight="semibold" >
             {username}
           </Text>
         </>
