@@ -119,12 +119,19 @@ impl BlottoContract<'_> {
         let mut i = 0;
         for army in data.armies {
             i += 1;
-            let ArmyInfo { name, ipfs_uri } = army;
+            let ArmyInfo {
+                name,
+                description,
+                image_uri,
+                ipfs_uri,
+            } = army;
             self.armies.save(
                 ctx.deps.storage,
                 i,
                 &Army {
                     name,
+                    description,
+                    image_uri,
                     ipfs_uri,
                     id: i,
                     total_staked: Uint128::zero(),
@@ -142,6 +149,8 @@ impl BlottoContract<'_> {
                 i,
                 &Battlefield {
                     name: bf.clone().name,
+                    description: bf.clone().description,
+                    image_uri: bf.clone().image_uri,
                     ipfs_uri: bf.clone().ipfs_uri,
                     id: i,
                     value: bf.value,
@@ -229,10 +238,10 @@ impl BlottoContract<'_> {
 
                 self.stakes.save(
                     ctx.deps.storage,
-                    (army_id.clone(), battlefield_id, &ctx.info.sender.clone()),
+                    (army_id, battlefield_id, &ctx.info.sender.clone()),
                     &StakeInfo {
                         amount: stake.amount.checked_add(amount)?,
-                        army: army_id.clone(),
+                        army: army_id,
                         battlefield_id,
                         player: ctx.info.sender.clone(),
                     },
@@ -240,10 +249,10 @@ impl BlottoContract<'_> {
             }
             None => self.stakes.save(
                 ctx.deps.storage,
-                (army_id.clone(), battlefield_id, &ctx.info.sender.clone()),
+                (army_id, battlefield_id, &ctx.info.sender.clone()),
                 &StakeInfo {
                     amount,
-                    army: army_id.clone(),
+                    army: army_id,
                     battlefield_id,
                     player: ctx.info.sender.clone(),
                 },
@@ -437,19 +446,16 @@ impl BlottoContract<'_> {
             .player_totals_by_army
             .may_load(ctx.deps.storage, (&ctx.info.sender, game_winner.id))?;
 
-        match players_stake {
-            Some(players_stake) => {
-                // TODO this math may have edge cases?
-                // Calculate players share of the prize pool
-                // players stake * prize pool / total staked on winning army
-                let winnings = players_stake
-                    .checked_mul(prize_pool)?
-                    .checked_div(game_winner.total_staked)?;
+        if let Some(players_stake) = players_stake {
+            // TODO this math may have edge cases?
+            // Calculate players share of the prize pool
+            // players stake * prize pool / total staked on winning army
+            let winnings = players_stake
+                .checked_mul(prize_pool)?
+                .checked_div(game_winner.total_staked)?;
 
-                // Add player's share of the prize pool to the withdraw_amount
-                withdraw_amount = withdraw_amount.checked_add(winnings)?;
-            }
-            None => (),
+            // Add player's share of the prize pool to the withdraw_amount
+            withdraw_amount = withdraw_amount.checked_add(winnings)?;
         }
 
         let mut resp = Response::new()
@@ -533,5 +539,11 @@ impl BlottoContract<'_> {
             game_phase: self.phase.load(ctx.deps.storage)?,
             winner: self.winner.may_load(ctx.deps.storage)?,
         })
+    }
+}
+
+impl Default for BlottoContract<'_> {
+    fn default() -> Self {
+        Self::new()
     }
 }

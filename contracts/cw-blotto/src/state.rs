@@ -6,7 +6,13 @@ use cw_storage_plus::{Index, IndexList, MultiIndex};
 /// Army Info used for instantiation
 #[cw_serde]
 pub struct ArmyInfo {
+    /// The Army name
     pub name: String,
+    /// The Army's description
+    pub description: Option<String>,
+    /// The Army's image
+    pub image_uri: Option<String>,
+    /// Additional metadata about the army stored offchain
     pub ipfs_uri: Option<String>,
 }
 
@@ -15,6 +21,10 @@ pub struct ArmyInfo {
 pub struct Army {
     /// The Army name
     pub name: String,
+    /// The Army's description
+    pub description: Option<String>,
+    /// The Army's image
+    pub image_uri: Option<String>,
     /// Additional metadata about the army stored offchain
     pub ipfs_uri: Option<String>,
     /// The id for the Army
@@ -30,6 +40,10 @@ pub struct Army {
 pub struct Battlefield {
     /// The Battlefield name
     pub name: String,
+    /// The battlefield description
+    pub description: Option<String>,
+    /// The battlefield image
+    pub image_uri: Option<String>,
     /// Additional metadata about the battlefield stored offchain
     pub ipfs_uri: Option<String>,
     /// The Battlefield ID
@@ -45,6 +59,10 @@ pub struct Battlefield {
 pub struct BattlefieldInfo {
     /// The Battlefield name
     pub name: String,
+    /// The battlefield description
+    pub description: Option<String>,
+    /// The battlefield image
+    pub image_uri: Option<String>,
     /// Additional metadata about the battlefield stored offchain
     pub ipfs_uri: Option<String>,
     /// The victory point value of the particular battle field
@@ -83,11 +101,11 @@ pub struct StakeInfo {
 }
 
 pub fn army_idx(_pk: &[u8], d: &StakeInfo) -> u8 {
-    d.army.clone()
+    d.army
 }
 
 pub fn battlefield_id_idx(_pk: &[u8], d: &StakeInfo) -> u8 {
-    d.battlefield_id.clone()
+    d.battlefield_id
 }
 
 pub fn player_idx(_pk: &[u8], d: &StakeInfo) -> Addr {
