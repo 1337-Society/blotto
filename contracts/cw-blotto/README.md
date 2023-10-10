@@ -22,12 +22,15 @@ Fighter payout:
 ```json
 {
   "data": {
-    "armies": [{ "name": "Red" }, { "name": "Blue" }],
+    "armies": [
+      { "name": "Red", "description": "The Red Army.", "image_uri": "" },
+      { "name": "Blue", "description": "The Blue Army.", "image_uri": "" }
+    ],
     "battlefields": [
-      { "name": "The Capital", "value": 7 },
-      { "name": "Crimson Cliffs", "value": 3 },
-      { "name": "Ironclad Arena", "value": 5 },
-      { "name": "Starfall Summit", "value": 6 }
+      { "name": "The Capital", "description": "", "image_uri": "",  "value": 7 },
+      { "name": "Crimson Cliffs", "description": "", "image_uri": "",  "value": 3 },
+      { "name": "Ironclad Arena", "description": "", "image_uri": "", "value": 5 },
+      { "name": "Starfall Summit", "description": "", "image_uri": "", "value": 6 }
     ],
     "battle_duration": "100000",
     "denom": "ujunox"
