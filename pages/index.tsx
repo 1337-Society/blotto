@@ -25,6 +25,7 @@ import {
   Flex,
   Icon,
   useColorModeValue,
+  useColorMode,
 } from "@chakra-ui/react";
 
 import { NavBar } from "../components/navbar";
@@ -141,6 +142,12 @@ export default function Home() {
   const [battlefields, setBattlefields] = useState<Battlefield[]>([]);
   const [config, setConfig] = useState<Config>();
   const [blotto, setBlotto] = useState<BlottoClient>();
+
+  // Hack to force dark mode
+  const { colorMode, toggleColorMode } = useColorMode();
+  if (colorMode === "light") {
+    toggleColorMode();
+  }
 
   // not sure this is useful?
   // const { wallet } = useWallet()
