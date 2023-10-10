@@ -476,6 +476,8 @@ impl BlottoContract<'_> {
         Ok(resp)
     }
 
+    // TODO query current staked totals for a battlefield
+
     /// Queries an army by id.
     #[msg(query)]
     pub fn army(&self, ctx: QueryCtx, id: u8) -> StdResult<Army> {

@@ -6,7 +6,7 @@
 
 import { CosmWasmClient, SigningCosmWasmClient, ExecuteResult } from "@cosmjs/cosmwasm-stargate";
 import { Coin, StdFee } from "@cosmjs/amino";
-import { Timestamp, Uint64, InstantiateMsg, InstantiateMsgData, ArmyInfo, BattlefieldInfo, ExecuteMsg, ExecMsg, QueryMsg, QueryMsg1, Uint128, ArrayOfArmy, Army, Battlefield, ArrayOfBattlefield, Config, GamePhase, StatusResponse } from "./Blotto.types";
+import { Timestamp, Uint64, InstantiateMsg, InstantiateMsgData, ArmyInfo, BattlefieldInfo, ExecuteMsg, ExecMsg, QueryMsg, QueryMsg1, Uint128, ArrayOfArmy, Army, Battlefield, ArrayOfBattlefield, Config, Addr, PlayerInfoResponse, StakeInfo, GamePhase, StatusResponse } from "./Blotto.types";
 export interface BlottoReadOnlyInterface {
   contractAddress: string;
   army: ({
@@ -22,6 +22,11 @@ export interface BlottoReadOnlyInterface {
   }) => Promise<Battlefield>;
   battlefields: () => Promise<ArrayOfBattlefield>;
   config: () => Promise<Config>;
+  playerInfo: ({
+    player
+  }: {
+    player: string;
+  }) => Promise<PlayerInfoResponse>;
   status: () => Promise<StatusResponse>;
 }
 export class BlottoQueryClient implements BlottoReadOnlyInterface {
@@ -36,6 +41,7 @@ export class BlottoQueryClient implements BlottoReadOnlyInterface {
     this.battlefield = this.battlefield.bind(this);
     this.battlefields = this.battlefields.bind(this);
     this.config = this.config.bind(this);
+    this.playerInfo = this.playerInfo.bind(this);
     this.status = this.status.bind(this);
   }
 
@@ -74,6 +80,17 @@ export class BlottoQueryClient implements BlottoReadOnlyInterface {
   config = async (): Promise<Config> => {
     return this.client.queryContractSmart(this.contractAddress, {
       config: {}
+    });
+  };
+  playerInfo = async ({
+    player
+  }: {
+    player: string;
+  }): Promise<PlayerInfoResponse> => {
+    return this.client.queryContractSmart(this.contractAddress, {
+      player_info: {
+        player
+      }
     });
   };
   status = async (): Promise<StatusResponse> => {

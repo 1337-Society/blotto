@@ -1,4 +1,3 @@
-
 import "../styles/globals.css";
 import type { AppProps } from "next/app";
 import { ChainProvider } from "@cosmos-kit/react";
@@ -34,7 +33,7 @@ function CreateCosmosApp({ Component, pageProps }: AppProps) {
           };
         case "junotestnet":
           return {
-            gasPrice: GasPrice.fromString("0.0025ujuno"),
+            gasPrice: GasPrice.fromString("0.0025ujunox"),
           };
       }
     },
