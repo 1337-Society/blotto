@@ -74,7 +74,7 @@ const BattleCard = (args: any) => {
   };
 
   // TODO show player staked info on card (player_info query)
-  // TODO get staked amounts of both armies (tbd query)
+  // TODO get staked amounts of both armies (army_totals_by_battlefield query)
 
   return (
     <Card

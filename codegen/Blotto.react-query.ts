@@ -72,12 +72,21 @@ export function useBlottoBattlefieldQuery<TData = Battlefield>({
     enabled: !!client && (options?.enabled != undefined ? options.enabled : true)
   });
 }
-export interface BlottoArmiesQuery<TData> extends BlottoReactQuery<ArrayOfArmy, TData> {}
-export function useBlottoArmiesQuery<TData = ArrayOfArmy>({
+export interface BlottoArmyTotalsByBattlefieldQuery<TData> extends BlottoReactQuery<Uint128, TData> {
+  args: {
+    armyId: number;
+    battlefieldId: number;
+  };
+}
+export function useBlottoArmyTotalsByBattlefieldQuery<TData = Uint128>({
   client,
+  args,
   options
-}: BlottoArmiesQuery<TData>) {
-  return useQuery<ArrayOfArmy, Error, TData>(["blottoArmies", client?.contractAddress], () => client ? client.armies() : Promise.reject(new Error("Invalid client")), { ...options,
+}: BlottoArmyTotalsByBattlefieldQuery<TData>) {
+  return useQuery<Uint128, Error, TData>(["blottoArmyTotalsByBattlefield", client?.contractAddress, JSON.stringify(args)], () => client ? client.armyTotalsByBattlefield({
+    armyId: args.armyId,
+    battlefieldId: args.battlefieldId
+  }) : Promise.reject(new Error("Invalid client")), { ...options,
     enabled: !!client && (options?.enabled != undefined ? options.enabled : true)
   });
 }
@@ -94,6 +103,15 @@ export function useBlottoArmyQuery<TData = Army>({
   return useQuery<Army, Error, TData>(["blottoArmy", client?.contractAddress, JSON.stringify(args)], () => client ? client.army({
     id: args.id
   }) : Promise.reject(new Error("Invalid client")), { ...options,
+    enabled: !!client && (options?.enabled != undefined ? options.enabled : true)
+  });
+}
+export interface BlottoArmiesQuery<TData> extends BlottoReactQuery<ArrayOfArmy, TData> {}
+export function useBlottoArmiesQuery<TData = ArrayOfArmy>({
+  client,
+  options
+}: BlottoArmiesQuery<TData>) {
+  return useQuery<ArrayOfArmy, Error, TData>(["blottoArmies", client?.contractAddress], () => client ? client.armies() : Promise.reject(new Error("Invalid client")), { ...options,
     enabled: !!client && (options?.enabled != undefined ? options.enabled : true)
   });
 }

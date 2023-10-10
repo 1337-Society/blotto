@@ -478,12 +478,6 @@ impl BlottoContract<'_> {
 
     // TODO query current staked totals for a battlefield
 
-    /// Queries an army by id.
-    #[msg(query)]
-    pub fn army(&self, ctx: QueryCtx, id: u8) -> StdResult<Army> {
-        self.armies.load(ctx.deps.storage, id)
-    }
-
     /// Returns a list of armies
     #[msg(query)]
     pub fn armies(&self, ctx: QueryCtx) -> StdResult<Vec<Army>> {
@@ -492,6 +486,24 @@ impl BlottoContract<'_> {
             .range(ctx.deps.storage, None, None, Order::Ascending)
             .map(|a| a.unwrap().1)
             .collect::<Vec<Army>>())
+    }
+
+    /// Queries an army by id.
+    #[msg(query)]
+    pub fn army(&self, ctx: QueryCtx, id: u8) -> StdResult<Army> {
+        self.armies.load(ctx.deps.storage, id)
+    }
+
+    /// Queries army totals by battlefield
+    #[msg(query)]
+    pub fn army_totals_by_battlefield(
+        &self,
+        ctx: QueryCtx,
+        army_id: u8,
+        battlefield_id: u8,
+    ) -> StdResult<Uint128> {
+        self.army_totals_by_battlefield
+            .load(ctx.deps.storage, (army_id, battlefield_id))
     }
 
     /// Queries a battlefield by id.

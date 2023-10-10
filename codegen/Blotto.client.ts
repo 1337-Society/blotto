@@ -9,12 +9,19 @@ import { Coin, StdFee } from "@cosmjs/amino";
 import { Timestamp, Uint64, InstantiateMsg, InstantiateMsgData, ArmyInfo, BattlefieldInfo, ExecuteMsg, ExecMsg, QueryMsg, QueryMsg1, Uint128, ArrayOfArmy, Army, Battlefield, ArrayOfBattlefield, Config, Addr, PlayerInfoResponse, StakeInfo, GamePhase, StatusResponse } from "./Blotto.types";
 export interface BlottoReadOnlyInterface {
   contractAddress: string;
+  armies: () => Promise<ArrayOfArmy>;
   army: ({
     id
   }: {
     id: number;
   }) => Promise<Army>;
-  armies: () => Promise<ArrayOfArmy>;
+  armyTotalsByBattlefield: ({
+    armyId,
+    battlefieldId
+  }: {
+    armyId: number;
+    battlefieldId: number;
+  }) => Promise<Uint128>;
   battlefield: ({
     id
   }: {
@@ -36,8 +43,9 @@ export class BlottoQueryClient implements BlottoReadOnlyInterface {
   constructor(client: CosmWasmClient, contractAddress: string) {
     this.client = client;
     this.contractAddress = contractAddress;
-    this.army = this.army.bind(this);
     this.armies = this.armies.bind(this);
+    this.army = this.army.bind(this);
+    this.armyTotalsByBattlefield = this.armyTotalsByBattlefield.bind(this);
     this.battlefield = this.battlefield.bind(this);
     this.battlefields = this.battlefields.bind(this);
     this.config = this.config.bind(this);
@@ -45,6 +53,11 @@ export class BlottoQueryClient implements BlottoReadOnlyInterface {
     this.status = this.status.bind(this);
   }
 
+  armies = async (): Promise<ArrayOfArmy> => {
+    return this.client.queryContractSmart(this.contractAddress, {
+      armies: {}
+    });
+  };
   army = async ({
     id
   }: {
@@ -56,9 +69,18 @@ export class BlottoQueryClient implements BlottoReadOnlyInterface {
       }
     });
   };
-  armies = async (): Promise<ArrayOfArmy> => {
+  armyTotalsByBattlefield = async ({
+    armyId,
+    battlefieldId
+  }: {
+    armyId: number;
+    battlefieldId: number;
+  }): Promise<Uint128> => {
     return this.client.queryContractSmart(this.contractAddress, {
-      armies: {}
+      army_totals_by_battlefield: {
+        army_id: armyId,
+        battlefield_id: battlefieldId
+      }
     });
   };
   battlefield = async ({

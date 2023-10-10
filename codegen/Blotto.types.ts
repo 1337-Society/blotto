@@ -47,12 +47,18 @@ export type ExecMsg = {
 };
 export type QueryMsg = QueryMsg1;
 export type QueryMsg1 = {
+  armies: {
+    [k: string]: unknown;
+  };
+} | {
   army: {
     id: number;
     [k: string]: unknown;
   };
 } | {
-  armies: {
+  army_totals_by_battlefield: {
+    army_id: number;
+    battlefield_id: number;
     [k: string]: unknown;
   };
 } | {
