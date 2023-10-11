@@ -4,12 +4,7 @@ import React, { useState, useEffect } from "react";
 
 import Head from "next/head";
 
-import { LinkIcon } from "@chakra-ui/icons";
-
 import {
-  Box,
-  Divider,
-  Grid,
   Heading,
   Text,
   Stack,
@@ -22,41 +17,74 @@ import {
   Image,
   Link,
   Button,
-  Flex,
-  Icon,
   useColorModeValue,
   useColorMode,
 } from "@chakra-ui/react";
 
 import { NavBar } from "../components/navbar";
 
-import { useChain, useWallet } from "@cosmos-kit/react";
+import { useChain } from "@cosmos-kit/react";
 
 import { chainName, blottoContractAddress } from "../config/defaults";
 
 import { ContractsProvider } from "../codegen/contracts-context";
-import { useContracts } from "../codegen/contracts-context";
 import { BlottoClient } from "../codegen/Blotto.client";
-import { Army, Battlefield, Config } from "../codegen/Blotto.types";
+import {
+  Army,
+  Battlefield,
+  Config,
+  PlayerInfoResponse,
+  StakeInfo,
+} from "../codegen/Blotto.types";
 import { coin } from "@cosmjs/stargate";
 
-const BattleBar = () => {
+const BattleBar = (args: any) => {
+  let red = args.red;
+  let blue = args.blue;
+
+  // TODO probably a better way to handle this bar
+  let redWidth;
+  let blueWidth;
+  switch (true) {
+    // TODO this is broken
+    // Red is not zero but blue is, full red
+    case red !== "0" && blue === "0":
+      redWidth = "100%";
+      blueWidth = "100%";
+      break;
+    // blue is not zero but red is, full blue
+    case red === "0" && blue !== "0":
+      redWidth = "0%";
+      blueWidth = "100%";
+      break;
+    // TODO this is probably very wrong
+    // Neither are zero, find the ratio of red to blue
+    case red !== "0" && blue !== "0":
+      redWidth = `${Math.floor(((red / blue) * 100) / 2)}%`;
+      blueWidth = `${Math.floor(((blue / red) * 100) / 2)}%`;
+      break;
+    // Default to equal width
+    default:
+      redWidth = "50%";
+      blueWidth = "100%";
+  }
+
   return (
     <div
       className="Widget"
-      style={{ background: "#6060f0", width: "100%", color: "white" }}
+      style={{ background: "#6060f0", width: blueWidth, color: "white" }}
     >
       <div
         style={{
           background: "#f06060",
-          width: "19%",
+          width: redWidth,
           display: "inline-block",
           color: "white",
         }}
       >
-        23
+        {red}
       </div>{" "}
-      77
+      {blue}
     </div>
   );
 };
@@ -64,18 +92,52 @@ const BattleBar = () => {
 const BattleCard = (args: any) => {
   const battle: Battlefield = args.battle;
   const blotto: BlottoClient = args.blotto;
+  const config: Config = args.config;
+  let playerInfo = args.player;
 
+  const [playerStake, setPlayerStake] = useState<StakeInfo>();
+
+  let [blueTotal, setBlueTotal] = useState("0");
+  let [redTotal, setRedTotal] = useState("0");
+
+  useEffect(() => {
+    let getData = async () => {
+      // Get total staked amount on battlefield for red
+      setRedTotal(
+        await blotto.armyTotalsByBattlefield({
+          armyId: 1,
+          battlefieldId: battle.id,
+        })
+      );
+
+      // Get total staked amount on battlefield for blue
+      setBlueTotal(
+        await blotto.armyTotalsByBattlefield({
+          armyId: 2,
+          battlefieldId: battle.id,
+        })
+      );
+    };
+    getData();
+
+    if (playerInfo) {
+      let stakes = playerInfo.stakes;
+      for (let i in stakes) {
+        if (stakes[i].battlefield_id === battle.id) {
+          setPlayerStake(stakes[i]);
+        }
+      }
+    }
+  }, [playerInfo, battle, blotto]);
+
+  // TODO UI to handle getting amount
   const stake = async (armyId: number, battlefieldId: number) => {
-    // TODO UI to handle getting amount
-    // TODO get denom from blotto config
     let res = await blotto.stake({ armyId, battlefieldId }, "auto", "", [
-      coin("100", "ujunox"),
+      coin("100", config.denom),
     ]);
     console.log(res);
+    // TODO refresh data on tx
   };
-
-  // TODO show player staked info on card (player_info query)
-  // TODO get staked amounts of both armies (army_totals_by_battlefield query)
 
   return (
     <Card
@@ -100,10 +162,16 @@ const BattleCard = (args: any) => {
           <Heading size="md">{battle.name || ""}</Heading>
           <Text py="3">Victory points: {battle.value || 0}</Text>
           <Text py="3">{battle.description}</Text>
+          {playerStake && (
+            <Text py="3">
+              Your Stake: {playerStake.amount} on{" "}
+              {playerStake.army === 1 ? "red" : "blue"}
+            </Text>
+          )}
         </CardBody>
 
         <CardBody>
-          <BattleBar></BattleBar>
+          <BattleBar red={redTotal} blue={blueTotal}></BattleBar>
         </CardBody>
 
         <CardFooter>
@@ -142,17 +210,18 @@ export default function Home() {
   const [battlefields, setBattlefields] = useState<Battlefield[]>([]);
   const [config, setConfig] = useState<Config>();
   const [blotto, setBlotto] = useState<BlottoClient>();
+  const [playerInfo, setPlayerInfo] = useState<PlayerInfoResponse>();
 
+  // TODO do this properly with chakra UI themes, or switch UI framework
   // Hack to force dark mode
   const { colorMode, toggleColorMode } = useColorMode();
-  if (colorMode === "light") {
-    toggleColorMode();
+  if (typeof window !== "undefined") {
+    if (colorMode === "light") {
+      toggleColorMode();
+    }
   }
 
-  // not sure this is useful?
-  // const { wallet } = useWallet()
-
-  // get someting called a context which appears to be something around a current user and a chain
+  // Get someting called a context which appears to be something around a current user and a chain
   const context = useChain(chainName);
 
   useEffect(() => {
@@ -187,11 +256,15 @@ export default function Home() {
       setConfig(await blotto.config());
       setArmies(await blotto.armies());
       setBattlefields(await blotto.battlefields());
+      if (context.address)
+        setPlayerInfo(await blotto.playerInfo({ player: context.address }));
     };
     getData();
-  });
+  }, [context]);
 
-  // TODO show staked totals for each army (armies query)
+  // TODO show countdown with how much time is left
+
+  // TODO show staked totals for each army (armies query already has the total)
 
   return (
     <Container maxW="3xl" py={10}>
@@ -213,11 +286,13 @@ export default function Home() {
           }}
         >
           <VStack>
-            {battlefields.map((entry) => (
+            {battlefields.map((entry, key) => (
               <BattleCard
-                key={entry.name}
+                key={key}
                 battle={entry}
                 blotto={blotto}
+                config={config}
+                player={playerInfo}
               ></BattleCard>
             ))}
           </VStack>

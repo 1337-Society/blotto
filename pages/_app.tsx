@@ -57,6 +57,14 @@ function CreateCosmosApp({ Component, pageProps }: AppProps) {
             },
           },
         }}
+        endpointOptions={{
+          endpoints: {
+            // Specify custom testnet endpoint with less rate limiting
+            junotestnet: {
+              rpc: ["https://rpc.uni.junonetwork.io:443"],
+            },
+          },
+        }}
         signerOptions={signerOptions}
       >
         <Component {...pageProps} />
