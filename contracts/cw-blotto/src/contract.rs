@@ -313,17 +313,16 @@ impl BlottoContract<'_> {
                 .flatten()
                 .collect();
 
-            // TODO no unwrap
             // Sort army total stakes by staked amount, last item will be the winner
-            army_totals.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
+            army_totals.sort_by(|a, b| a.1.cmp(&b.1));
 
             // TODO check for tie
 
-            // TODO no unwrap
             // Determine which army won: split_last returns the last element
             // and the rest of the vector.
-            let (winner, dead) = army_totals.split_last().unwrap();
-
+            let (winner, dead) = army_totals
+                .split_last()
+                .ok_or(ContractError::InvalidArmyTotals {})?;
             println!("totals {:?}", army_totals);
             println!("winning army: {:?}", winner);
 
@@ -339,11 +338,16 @@ impl BlottoContract<'_> {
                 winner.0,
                 |a| -> Result<Army, ContractError> {
                     match a {
-                        Some(a) => Ok(Army {
-                            // TODO no unwrap
-                            victory_points: a.victory_points.checked_add(bf.1.value).unwrap(),
-                            ..a
-                        }),
+                        Some(a) => {
+                            let victory_points = a
+                                .victory_points
+                                .checked_add(bf.1.value)
+                                .ok_or(ContractError::InvalidVictoryPointsCalc { id: winner.0 })?;
+                            Ok(Army {
+                                victory_points,
+                                ..a
+                            })
+                        }
                         None => Err(ContractError::NoArmy { id: winner.0 }),
                     }
                 },
@@ -360,22 +364,16 @@ impl BlottoContract<'_> {
             )?;
         }
 
-        // TODO refactor no unwrap
         // TODO handle tie
         // Determine over all winner
         let game_winner = self
             .armies
             .range(ctx.deps.storage, None, None, Order::Descending)
-            .max_by(|a, b| {
-                a.as_ref()
-                    .unwrap()
-                    .1
-                    .victory_points
-                    .cmp(&b.as_ref().unwrap().1.victory_points)
-            })
-            .unwrap()
-            .unwrap()
-            .1;
+            .map(|res| res.map(|(_, army)| army))
+            .collect::<Result<Vec<_>, _>>()?
+            .into_iter()
+            .max_by_key(|army| army.victory_points)
+            .ok_or(ContractError::InvalidGameWinnerDetermination {})?;
         self.winner.save(ctx.deps.storage, &game_winner)?;
 
         // Save the prize pool amount for the winning army
@@ -481,11 +479,10 @@ impl BlottoContract<'_> {
     /// Returns a list of armies
     #[msg(query)]
     pub fn armies(&self, ctx: QueryCtx) -> StdResult<Vec<Army>> {
-        Ok(self
-            .armies
+        self.armies
             .range(ctx.deps.storage, None, None, Order::Ascending)
-            .map(|a| a.unwrap().1)
-            .collect::<Vec<Army>>())
+            .map(|res| res.map(|(_, army)| army))
+            .collect::<StdResult<Vec<Army>>>()
     }
 
     /// Queries an army by id.
@@ -518,11 +515,10 @@ impl BlottoContract<'_> {
     /// Returns a list of battlefields
     #[msg(query)]
     pub fn battlefields(&self, ctx: QueryCtx) -> StdResult<Vec<Battlefield>> {
-        Ok(self
-            .battlefields
+        self.battlefields
             .range(ctx.deps.storage, None, None, Order::Ascending)
-            .map(|bf| bf.unwrap().1)
-            .collect::<Vec<Battlefield>>())
+            .map(|res| res.map(|(_, bf)| bf))
+            .collect::<StdResult<Vec<Battlefield>>>()
     }
 
     /// Returns information about the game configuration

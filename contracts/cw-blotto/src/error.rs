@@ -26,8 +26,17 @@ pub enum ContractError {
     )]
     InvalidArmyCount { max_limit: u32 },
 
+    #[error("Invalid army totals, not able to determine a winner")]
+    InvalidArmyTotals {},
+
     #[error("Contract must be instantiated with at least 1 battlefield and less than {max_limit}")]
     InvalidBattlefieldCount { max_limit: u32 },
+
+    #[error("Failed to determine a game winner")]
+    InvalidGameWinnerDetermination {},
+
+    #[error("Invalid victory points calculation for winner with the ID {id}")]
+    InvalidVictoryPointsCalc { id: u8 },
 
     #[error("Army with the ID {id}, was not found.")]
     NoArmy { id: u8 },
