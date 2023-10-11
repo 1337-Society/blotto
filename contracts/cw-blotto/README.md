@@ -42,7 +42,7 @@ Fighter payout:
         "value": 7
       },
       {
-        "name": "Crimson Passc",
+        "name": "Crimson Passage",
         "description": "A narrow gorge, its red rock walls towering high above, where every step taken stains the earth with blood.",
         "image_uri": "https://user-images.githubusercontent.com/521978/274047700-dd9304eb-0c37-4f43-a0fd-cfad17624c6b.png",
         "value": 3

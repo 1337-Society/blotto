@@ -1,4 +1,4 @@
-use cosmwasm_std::{coins, Addr, Timestamp};
+use cosmwasm_std::{coins, Addr, Timestamp, Uint128};
 use cw_utils::PaymentError;
 use sylvia::cw_multi_test::App as MtApp;
 use sylvia::multitest::App;
@@ -229,6 +229,12 @@ fn test_happy_path() {
         .with_funds(&coins(200, DENOM))
         .call(PLAYER_5)
         .unwrap();
+
+    // Test army total query
+    let res = blotto
+        .army_totals_by_battlefield(armies[0].id, battlefields[0].id)
+        .unwrap();
+    assert_eq!(res, Uint128::new(150));
 
     // Tally the game fails as time has not elapsed
     let err = blotto.tally().call(CREATOR).unwrap_err();

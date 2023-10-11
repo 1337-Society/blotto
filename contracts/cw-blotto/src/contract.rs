@@ -42,7 +42,7 @@ pub struct InstantiateMsgData {
 pub struct BlottoContract<'a> {
     /// Map of armies by ID
     pub armies: Map<'a, u8, Army>,
-    /// The staked totals for armies by battlefield (army_id, battlefield_id)
+    /// The staked totals for armies by battlefield (battlefield_id, army_id)
     pub army_totals_by_battlefield: Map<'a, (u8, u8), Uint128>,
     /// A map of the different battlefields
     pub battlefields: Map<'a, u8, Battlefield>,
@@ -502,8 +502,11 @@ impl BlottoContract<'_> {
         army_id: u8,
         battlefield_id: u8,
     ) -> StdResult<Uint128> {
-        self.army_totals_by_battlefield
-            .load(ctx.deps.storage, (army_id, battlefield_id))
+        let army_total = self
+            .army_totals_by_battlefield
+            .may_load(ctx.deps.storage, (battlefield_id, army_id))?
+            .unwrap_or_default();
+        Ok(army_total)
     }
 
     /// Queries a battlefield by id.
