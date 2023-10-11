@@ -7,11 +7,9 @@
 import * as _0 from "./Blotto.types";
 import * as _1 from "./Blotto.client";
 import * as _2 from "./Blotto.react-query";
-//import * as _3 from "./Blotto.message-builder";
 export namespace contracts {
   export const Blotto = { ..._0,
     ..._1,
-    ..._2,
-//    ..._3
+    ..._2
   };
 }

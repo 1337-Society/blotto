@@ -42,7 +42,7 @@ pub struct InstantiateMsgData {
 pub struct BlottoContract<'a> {
     /// Map of armies by ID
     pub armies: Map<'a, u8, Army>,
-    /// The staked totals for armies by battlefield (army_id, battlefield_id)
+    /// The staked totals for armies by battlefield (battlefield_id, army_id)
     pub army_totals_by_battlefield: Map<'a, (u8, u8), Uint128>,
     /// A map of the different battlefields
     pub battlefields: Map<'a, u8, Battlefield>,
@@ -119,12 +119,19 @@ impl BlottoContract<'_> {
         let mut i = 0;
         for army in data.armies {
             i += 1;
-            let ArmyInfo { name, ipfs_uri } = army;
+            let ArmyInfo {
+                name,
+                description,
+                image_uri,
+                ipfs_uri,
+            } = army;
             self.armies.save(
                 ctx.deps.storage,
                 i,
                 &Army {
                     name,
+                    description,
+                    image_uri,
                     ipfs_uri,
                     id: i,
                     total_staked: Uint128::zero(),
@@ -142,6 +149,8 @@ impl BlottoContract<'_> {
                 i,
                 &Battlefield {
                     name: bf.clone().name,
+                    description: bf.clone().description,
+                    image_uri: bf.clone().image_uri,
                     ipfs_uri: bf.clone().ipfs_uri,
                     id: i,
                     value: bf.value,
@@ -229,10 +238,10 @@ impl BlottoContract<'_> {
 
                 self.stakes.save(
                     ctx.deps.storage,
-                    (army_id.clone(), battlefield_id, &ctx.info.sender.clone()),
+                    (army_id, battlefield_id, &ctx.info.sender.clone()),
                     &StakeInfo {
                         amount: stake.amount.checked_add(amount)?,
-                        army: army_id.clone(),
+                        army: army_id,
                         battlefield_id,
                         player: ctx.info.sender.clone(),
                     },
@@ -240,10 +249,10 @@ impl BlottoContract<'_> {
             }
             None => self.stakes.save(
                 ctx.deps.storage,
-                (army_id.clone(), battlefield_id, &ctx.info.sender.clone()),
+                (army_id, battlefield_id, &ctx.info.sender.clone()),
                 &StakeInfo {
                     amount,
-                    army: army_id.clone(),
+                    army: army_id,
                     battlefield_id,
                     player: ctx.info.sender.clone(),
                 },
@@ -304,15 +313,15 @@ impl BlottoContract<'_> {
                 .flatten()
                 .collect();
 
-            // TODO reverse sort?
             // TODO no unwrap
-            // Sort army total stakes
+            // Sort army total stakes by staked amount, last item will be the winner
             army_totals.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
 
             // TODO check for tie
 
             // TODO no unwrap
-            // Determine which army won
+            // Determine which army won: split_last returns the last element
+            // and the rest of the vector.
             let (winner, dead) = army_totals.split_last().unwrap();
 
             println!("totals {:?}", army_totals);
@@ -406,16 +415,12 @@ impl BlottoContract<'_> {
             return Err(ContractError::NothingToClaim {});
         }
 
-        println!("STAKES: {:?}", stakes);
         for stake in stakes {
             let bf = self
                 .battlefields
                 .load(ctx.deps.storage, stake.1.battlefield_id)?;
             match bf.winner {
                 Some(winner) => {
-                    println!("bf winner: {:?}", winner);
-                    println!("player_stake: {:?}", stake);
-
                     // Check if staked with the winning army, if so they can withdraw the staked balance
                     if winner == stake.1.army {
                         withdraw_amount = withdraw_amount.checked_add(stake.1.amount)?;
@@ -432,41 +437,26 @@ impl BlottoContract<'_> {
             }
         }
 
-        println!("withdraw_amount: {:?}", withdraw_amount);
-
         // Load game winner and prize pool
         let game_winner = self.winner.load(ctx.deps.storage)?;
         let prize_pool = self.prize_pool.load(ctx.deps.storage)?;
-
-        println!("======");
-        println!("game_winner: {:?}", game_winner);
-        println!("prize_pool: {:?}", prize_pool);
 
         // Load the total amount the player staked to the winning army
         let players_stake = self
             .player_totals_by_army
             .may_load(ctx.deps.storage, (&ctx.info.sender, game_winner.id))?;
 
-        println!("Players stake: {:?}", players_stake);
+        if let Some(players_stake) = players_stake {
+            // TODO this math may have edge cases?
+            // Calculate players share of the prize pool
+            // players stake * prize pool / total staked on winning army
+            let winnings = players_stake
+                .checked_mul(prize_pool)?
+                .checked_div(game_winner.total_staked)?;
 
-        match players_stake {
-            Some(players_stake) => {
-                // TODO this math may have edge cases?
-                // Calculate players share of the prize pool
-                // players stake * prize pool / total staked on winning army
-                let winnings = players_stake
-                    .checked_mul(prize_pool)?
-                    .checked_div(game_winner.total_staked)?;
-
-                println!("WINNNNNERRR: {:?}", winnings);
-
-                // Add player's share of the prize pool to the withdraw_amount
-                withdraw_amount = withdraw_amount.checked_add(winnings)?;
-            }
-            None => (),
+            // Add player's share of the prize pool to the withdraw_amount
+            withdraw_amount = withdraw_amount.checked_add(winnings)?;
         }
-
-        println!("final withdraw_amount: {:?}", withdraw_amount);
 
         let mut resp = Response::new()
             .add_attribute("action", "withdraw")
@@ -486,11 +476,7 @@ impl BlottoContract<'_> {
         Ok(resp)
     }
 
-    /// Queries an army by id.
-    #[msg(query)]
-    pub fn army(&self, ctx: QueryCtx, id: u8) -> StdResult<Army> {
-        self.armies.load(ctx.deps.storage, id)
-    }
+    // TODO query current staked totals for a battlefield
 
     /// Returns a list of armies
     #[msg(query)]
@@ -500,6 +486,27 @@ impl BlottoContract<'_> {
             .range(ctx.deps.storage, None, None, Order::Ascending)
             .map(|a| a.unwrap().1)
             .collect::<Vec<Army>>())
+    }
+
+    /// Queries an army by id.
+    #[msg(query)]
+    pub fn army(&self, ctx: QueryCtx, id: u8) -> StdResult<Army> {
+        self.armies.load(ctx.deps.storage, id)
+    }
+
+    /// Queries army totals by battlefield
+    #[msg(query)]
+    pub fn army_totals_by_battlefield(
+        &self,
+        ctx: QueryCtx,
+        army_id: u8,
+        battlefield_id: u8,
+    ) -> StdResult<Uint128> {
+        let army_total = self
+            .army_totals_by_battlefield
+            .may_load(ctx.deps.storage, (battlefield_id, army_id))?
+            .unwrap_or_default();
+        Ok(army_total)
     }
 
     /// Queries a battlefield by id.
@@ -524,9 +531,8 @@ impl BlottoContract<'_> {
         self.config.load(ctx.deps.storage)
     }
 
-    /// Essential player info
-    /// - How much has a player staked?
-    /// - Which battlefeilds are they staked in? (their list of stakes)
+    /// Returns information about a player and their stakes
+    #[msg(query)]
     pub fn player_info(&self, ctx: QueryCtx, player: String) -> StdResult<PlayerInfoResponse> {
         // Validate player address
         let player_addr = ctx.deps.api.addr_validate(&player)?;
@@ -537,9 +543,10 @@ impl BlottoContract<'_> {
             .player
             .prefix(player_addr)
             .range(ctx.deps.storage, None, None, Order::Ascending)
-            .collect::<StdResult<Vec<_>>>()?;
+            .map(|stake| stake.unwrap().1)
+            .collect::<Vec<StakeInfo>>();
 
-        unimplemented!()
+        Ok(PlayerInfoResponse { stakes })
     }
 
     /// Returns information about the game status
@@ -549,5 +556,11 @@ impl BlottoContract<'_> {
             game_phase: self.phase.load(ctx.deps.storage)?,
             winner: self.winner.may_load(ctx.deps.storage)?,
         })
+    }
+}
+
+impl Default for BlottoContract<'_> {
+    fn default() -> Self {
+        Self::new()
     }
 }

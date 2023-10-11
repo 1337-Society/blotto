@@ -17,10 +17,14 @@ export interface InstantiateMsgData {
   denom: string;
 }
 export interface ArmyInfo {
+  description?: string | null;
+  image_uri?: string | null;
   ipfs_uri?: string | null;
   name: string;
 }
 export interface BattlefieldInfo {
+  description?: string | null;
+  image_uri?: string | null;
   ipfs_uri?: string | null;
   name: string;
   value: number;
@@ -43,12 +47,18 @@ export type ExecMsg = {
 };
 export type QueryMsg = QueryMsg1;
 export type QueryMsg1 = {
+  armies: {
+    [k: string]: unknown;
+  };
+} | {
   army: {
     id: number;
     [k: string]: unknown;
   };
 } | {
-  armies: {
+  army_totals_by_battlefield: {
+    army_id: number;
+    battlefield_id: number;
     [k: string]: unknown;
   };
 } | {
@@ -65,6 +75,11 @@ export type QueryMsg1 = {
     [k: string]: unknown;
   };
 } | {
+  player_info: {
+    player: string;
+    [k: string]: unknown;
+  };
+} | {
   status: {
     [k: string]: unknown;
   };
@@ -72,14 +87,18 @@ export type QueryMsg1 = {
 export type Uint128 = string;
 export type ArrayOfArmy = Army[];
 export interface Army {
+  description?: string | null;
   id: number;
+  image_uri?: string | null;
   ipfs_uri?: string | null;
   name: string;
   total_staked: Uint128;
   victory_points: number;
 }
 export interface Battlefield {
+  description?: string | null;
   id: number;
+  image_uri?: string | null;
   ipfs_uri?: string | null;
   name: string;
   value: number;
@@ -91,7 +110,18 @@ export interface Config {
   denom: string;
   start: Timestamp;
 }
+export type Addr = string;
+export interface PlayerInfoResponse {
+  stakes: StakeInfo[];
+}
+export interface StakeInfo {
+  amount: Uint128;
+  army: number;
+  battlefield_id: number;
+  player: Addr;
+}
 export type GamePhase = "not_started" | "open" | "closed";
 export interface StatusResponse {
   game_phase: GamePhase;
+  winner?: Army | null;
 }

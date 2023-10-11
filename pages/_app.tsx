@@ -1,4 +1,3 @@
-
 import "../styles/globals.css";
 import type { AppProps } from "next/app";
 import { ChainProvider } from "@cosmos-kit/react";
@@ -34,7 +33,7 @@ function CreateCosmosApp({ Component, pageProps }: AppProps) {
           };
         case "junotestnet":
           return {
-            gasPrice: GasPrice.fromString("0.0025ujuno"),
+            gasPrice: GasPrice.fromString("0.0025ujunox"),
           };
       }
     },
@@ -55,6 +54,14 @@ function CreateCosmosApp({ Component, pageProps }: AppProps) {
               description: "CosmosKit dapp template",
               url: "https://docs.cosmoskit.com/",
               icons: [],
+            },
+          },
+        }}
+        endpointOptions={{
+          endpoints: {
+            // Specify custom testnet endpoint with less rate limiting
+            junotestnet: {
+              rpc: ["https://rpc.uni.junonetwork.io:443"],
             },
           },
         }}

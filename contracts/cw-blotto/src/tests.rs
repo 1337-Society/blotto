@@ -1,11 +1,11 @@
-use cosmwasm_std::{coins, to_binary, Addr, Coin, Empty, StdError, Timestamp, Uint128};
+use cosmwasm_std::{coins, Addr, Timestamp, Uint128};
 use cw_utils::PaymentError;
 use sylvia::cw_multi_test::App as MtApp;
 use sylvia::multitest::App;
 
 use crate::{
     contract::{multitest_utils::CodeId, InstantiateMsgData},
-    state::{Army, ArmyInfo, Battlefield, BattlefieldInfo, GamePhase},
+    state::{ArmyInfo, BattlefieldInfo, GamePhase},
     ContractError,
 };
 
@@ -29,10 +29,14 @@ fn test_instantiate_no_battlefields_fails() {
             armies: vec![
                 ArmyInfo {
                     name: "red".to_string(),
+                    description: Some("awesome army".to_string()),
+                    image_uri: Some("https://example.com/image.jpg".to_string()),
                     ipfs_uri: None,
                 },
                 ArmyInfo {
                     name: "blue".to_string(),
+                    description: Some("awesome army".to_string()),
+                    image_uri: Some("https://example.com/image.jpg".to_string()),
                     ipfs_uri: None,
                 },
             ],
@@ -61,6 +65,8 @@ fn test_instantiate_no_armies_fails() {
             armies: vec![],
             battlefields: vec![BattlefieldInfo {
                 name: "The Citadel".to_string(),
+                description: Some("awesome battlefield".to_string()),
+                image_uri: Some("https://example.com/image.jpg".to_string()),
                 ipfs_uri: None,
                 value: 2,
             }],
@@ -84,10 +90,14 @@ fn test_instantiate_one_army_fails() {
         .instantiate(InstantiateMsgData {
             armies: vec![ArmyInfo {
                 name: "red".to_string(),
+                description: Some("awesome army".to_string()),
+                image_uri: Some("https://example.com/image.jpg".to_string()),
                 ipfs_uri: None,
             }],
             battlefields: vec![BattlefieldInfo {
                 name: "The Citadel".to_string(),
+                description: Some("awesome battlefield".to_string()),
+                image_uri: Some("https://example.com/image.jpg".to_string()),
                 ipfs_uri: None,
                 value: 2,
             }],
@@ -134,26 +144,36 @@ fn test_happy_path() {
             armies: vec![
                 ArmyInfo {
                     name: "red".to_string(),
+                    description: Some("awesome army".to_string()),
+                    image_uri: Some("https://example.com/image.jpg".to_string()),
                     ipfs_uri: None,
                 },
                 ArmyInfo {
                     name: "blue".to_string(),
+                    description: Some("awesome army".to_string()),
+                    image_uri: Some("https://example.com/image.jpg".to_string()),
                     ipfs_uri: None,
                 },
             ],
             battlefields: vec![
                 BattlefieldInfo {
                     name: "The Citadel".to_string(),
+                    description: Some("awesome battlefield".to_string()),
+                    image_uri: Some("https://example.com/image.jpg".to_string()),
                     ipfs_uri: None,
                     value: 5,
                 },
                 BattlefieldInfo {
                     name: "Forest Zone".to_string(),
+                    description: Some("awesome battlefield".to_string()),
+                    image_uri: Some("https://example.com/image.jpg".to_string()),
                     ipfs_uri: None,
                     value: 3,
                 },
                 BattlefieldInfo {
                     name: "Coastal Port".to_string(),
+                    description: Some("awesome battlefield".to_string()),
+                    image_uri: Some("https://example.com/image.jpg".to_string()),
                     ipfs_uri: None,
                     value: 3,
                 },
@@ -209,6 +229,12 @@ fn test_happy_path() {
         .with_funds(&coins(200, DENOM))
         .call(PLAYER_5)
         .unwrap();
+
+    // Test army total query
+    let res = blotto
+        .army_totals_by_battlefield(armies[0].id, battlefields[0].id)
+        .unwrap();
+    assert_eq!(res, Uint128::new(150));
 
     // Tally the game fails as time has not elapsed
     let err = blotto.tally().call(CREATOR).unwrap_err();
@@ -301,21 +327,29 @@ fn test_tie() {
             armies: vec![
                 ArmyInfo {
                     name: "red".to_string(),
+                    description: Some("awesome army".to_string()),
+                    image_uri: Some("https://example.com/image.jpg".to_string()),
                     ipfs_uri: None,
                 },
                 ArmyInfo {
                     name: "blue".to_string(),
+                    description: Some("awesome army".to_string()),
+                    image_uri: Some("https://example.com/image.jpg".to_string()),
                     ipfs_uri: None,
                 },
             ],
             battlefields: vec![
                 BattlefieldInfo {
                     name: "The Citadel".to_string(),
+                    description: Some("awesome battlefield".to_string()),
+                    image_uri: Some("https://example.com/image.jpg".to_string()),
                     ipfs_uri: None,
                     value: 5,
                 },
                 BattlefieldInfo {
                     name: "Forest Zone".to_string(),
+                    description: Some("awesome battlefield".to_string()),
+                    image_uri: Some("https://example.com/image.jpg".to_string()),
                     ipfs_uri: None,
                     value: 3,
                 },

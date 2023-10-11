@@ -1,6 +1,6 @@
 use cosmwasm_schema::cw_serde;
 
-use crate::state::{Army, Battlefield, GamePhase};
+use crate::state::{Army, GamePhase, StakeInfo};
 
 #[cw_serde]
 pub struct StatusResponse {
@@ -9,4 +9,6 @@ pub struct StatusResponse {
 }
 
 #[cw_serde]
-pub struct PlayerInfoResponse {}
+pub struct PlayerInfoResponse {
+    pub stakes: Vec<StakeInfo>,
+}

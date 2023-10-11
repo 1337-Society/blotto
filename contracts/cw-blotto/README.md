@@ -22,12 +22,43 @@ Fighter payout:
 ```json
 {
   "data": {
-    "armies": [{ "name": "Red" }, { "name": "Blue" }],
+    "armies": [
+      {
+        "name": "Red",
+        "description": "The Red Army.",
+        "image_uri": "https://user-images.githubusercontent.com/521978/274048963-f8812377-3780-49d7-bbcf-f1005513d8e4.png"
+      },
+      {
+        "name": "Blue",
+        "description": "The Blue Army.",
+        "image_uri": "https://user-images.githubusercontent.com/521978/274048818-1d1e7655-fe76-48e8-85dc-67d14fc24bc8.png"
+      }
+    ],
     "battlefields": [
-      { "name": "The Capital", "value": 7 },
-      { "name": "Crimson Cliffs", "value": 3 },
-      { "name": "Ironclad Arena", "value": 5 },
-      { "name": "Starfall Summit", "value": 6 }
+      {
+        "name": "Stormhold Citadel",
+        "description": "A formidable fortress atop a jagged peak, surrounded by perpetual thunderstorms that mask the clash of armies in a shroud of chaos.",
+        "image_uri": "https://user-images.githubusercontent.com/521978/274047626-01f0e946-32f9-45b9-a334-2df6063666dd.png",
+        "value": 7
+      },
+      {
+        "name": "Crimson Passage",
+        "description": "A narrow gorge, its red rock walls towering high above, where every step taken stains the earth with blood.",
+        "image_uri": "https://user-images.githubusercontent.com/521978/274047700-dd9304eb-0c37-4f43-a0fd-cfad17624c6b.png",
+        "value": 3
+      },
+      {
+        "name": "Ironclad Arena",
+        "description": "A colossal steel arena, mechanized and ever-changing, where combatants fight not only each other but the very ground beneath their feet.",
+        "image_uri": "https://user-images.githubusercontent.com/521978/274047382-ca2bcad8-8e33-46df-9fa3-5b66eb179333.png",
+        "value": 5
+      },
+      {
+        "name": "Starfall Summit",
+        "description": "A mountaintop battlefield under a celestial shower, where fallen stars grant power to those who can seize them.",
+        "image_uri": "https://user-images.githubusercontent.com/521978/274047326-192415fe-df3c-4059-bf74-15d9c90857cc.png",
+        "value": 6
+      }
     ],
     "battle_duration": "100000",
     "denom": "ujunox"
