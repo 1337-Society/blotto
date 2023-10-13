@@ -1,4 +1,4 @@
-export const chainName = "juno";
+export const chainName = "junotestnet";
 export const stakingDenom = "ujunox";
 export const feeDenom = "ujunox";
 export const blottoContractAddress =
