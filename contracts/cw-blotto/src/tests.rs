@@ -299,7 +299,128 @@ fn test_happy_path() {
 fn test_no_one_plays() {}
 
 #[test]
-fn test_tie() {
+fn test_battlefield_tie() {
+    let app = MtApp::new(|router, _api, storage| {
+        router
+            .bank
+            .init_balance(storage, &Addr::unchecked(PLAYER_1), coins(300, DENOM))
+            .unwrap();
+        router
+            .bank
+            .init_balance(storage, &Addr::unchecked(PLAYER_2), coins(300, DENOM))
+            .unwrap();
+        router
+            .bank
+            .init_balance(storage, &Addr::unchecked(PLAYER_3), coins(300, DENOM))
+            .unwrap();
+        router
+            .bank
+            .init_balance(storage, &Addr::unchecked(PLAYER_4), coins(300, DENOM))
+            .unwrap();
+    });
+    let app = App::new(app);
+
+    let code_id = CodeId::store_code(&app);
+
+    let blotto = code_id
+        .instantiate(InstantiateMsgData {
+            armies: vec![
+                ArmyInfo {
+                    name: "red".to_string(),
+                    description: Some("awesome army".to_string()),
+                    image_uri: Some("https://example.com/image.jpg".to_string()),
+                    ipfs_uri: None,
+                },
+                ArmyInfo {
+                    name: "blue".to_string(),
+                    description: Some("awesome army".to_string()),
+                    image_uri: Some("https://example.com/image.jpg".to_string()),
+                    ipfs_uri: None,
+                },
+            ],
+            battlefields: vec![
+                BattlefieldInfo {
+                    name: "The Citadel".to_string(),
+                    description: Some("awesome battlefield".to_string()),
+                    image_uri: Some("https://example.com/image.jpg".to_string()),
+                    ipfs_uri: None,
+                    value: 5,
+                },
+                BattlefieldInfo {
+                    name: "Forest Zone".to_string(),
+                    description: Some("awesome battlefield".to_string()),
+                    image_uri: Some("https://example.com/image.jpg".to_string()),
+                    ipfs_uri: None,
+                    value: 3,
+                },
+            ],
+            battle_duration: Timestamp::from_seconds(10000),
+            denom: DENOM.to_string(),
+        })
+        .with_label("cw-blotto contract")
+        .call(CREATOR)
+        .unwrap();
+
+    // Query armies and battlefields
+    let armies = blotto.armies().unwrap();
+    let battlefields = blotto.battlefields().unwrap();
+
+    // Players stake equally on the first battlefield
+    blotto
+        .stake(armies[0].id, battlefields[0].id)
+        .with_funds(&coins(100, DENOM))
+        .call(PLAYER_1)
+        .unwrap();
+    blotto
+        .stake(armies[1].id, battlefields[0].id)
+        .with_funds(&coins(100, DENOM))
+        .call(PLAYER_2)
+        .unwrap();
+    blotto
+        .stake(armies[0].id, battlefields[1].id)
+        .with_funds(&coins(50, DENOM))
+        .call(PLAYER_3)
+        .unwrap();
+    blotto
+        .stake(armies[1].id, battlefields[1].id)
+        .with_funds(&coins(100, DENOM))
+        .call(PLAYER_4)
+        .unwrap();
+
+    // Time passes
+    app.update_block(|b| b.time = b.time.plus_seconds(60 * 60 * 24));
+
+    // Tally succeeds
+    let res = blotto.tally().call(CREATOR).unwrap();
+    println!("RESULT {:?}", res);
+
+    // Check blue victory
+    assert_eq!("blue".to_string(), res.events[1].attributes[2].value);
+    assert_eq!("2".to_string(), res.events[1].attributes[3].value);
+
+    // Check game phase has been updated
+    let phase = blotto.status().unwrap().game_phase;
+    assert_eq!(phase, GamePhase::Closed);
+
+    // Player 1 gets 100 for bf tie
+    let res = blotto.withdraw().call(PLAYER_1).unwrap();
+    assert_eq!("100".to_string(), res.events[1].attributes[2].value);
+
+    // Player 2 gets 100 for bf tie + 25 prize pool part
+    let res = blotto.withdraw().call(PLAYER_2).unwrap();
+    assert_eq!("125".to_string(), res.events[1].attributes[2].value);
+
+    // Player 3 gets nothing
+    let res = blotto.withdraw().call(PLAYER_3).unwrap();
+    assert_eq!("0".to_string(), res.events[1].attributes[2].value);
+
+    // Player 4 gets 100 initial stake + 25 prize pool part
+    let res = blotto.withdraw().call(PLAYER_4).unwrap();
+    assert_eq!("125".to_string(), res.events[1].attributes[2].value);
+}
+
+#[test]
+fn test_game_tie_same_stakes() {
     let app = MtApp::new(|router, _api, storage| {
         router
             .bank
@@ -382,7 +503,7 @@ fn test_tie() {
         .call(PLAYER_3)
         .unwrap();
     blotto
-        .stake(armies[1].id, battlefields[0].id)
+        .stake(armies[1].id, battlefields[1].id)
         .with_funds(&coins(100, DENOM))
         .call(PLAYER_4)
         .unwrap();
@@ -390,20 +511,140 @@ fn test_tie() {
     // Time passes
     app.update_block(|b| b.time = b.time.plus_seconds(60 * 60 * 24));
 
-    // TODO this should be a tie, there should be no winner
     // Tally succeeds
     let res = blotto.tally().call(CREATOR).unwrap();
     println!("RESULT {:?}", res);
 
-    // // Check red victory
-    // assert_eq!("red".to_string(), res.events[1].attributes[2].value);
-    // assert_eq!("1".to_string(), res.events[1].attributes[3].value);
+    // Check game phase has been updated
+    let phase = blotto.status().unwrap().game_phase;
+    assert_eq!(phase, GamePhase::Closed);
 
-    // // Check game phase has been updated
-    // let phase = blotto.status().unwrap().game_phase;
-    // assert_eq!(phase, GamePhase::Closed);
+    // All players 1-4 gets their stake 100 back for a game tie,
+    // but nothing else as there was no winner
+    let res = blotto.withdraw().call(PLAYER_1).unwrap();
+    assert_eq!("100".to_string(), res.events[1].attributes[2].value);
 
-    // // Player one get's to withdraw their balance from winning the battlefield
-    // // As well as additional prize winnings
-    // let res = blotto.withdraw().call(PLAYER_1).unwrap();
+    let res = blotto.withdraw().call(PLAYER_2).unwrap();
+    assert_eq!("100".to_string(), res.events[1].attributes[2].value);
+
+    let res = blotto.withdraw().call(PLAYER_3).unwrap();
+    assert_eq!("100".to_string(), res.events[1].attributes[2].value);
+
+    let res = blotto.withdraw().call(PLAYER_4).unwrap();
+    assert_eq!("100".to_string(), res.events[1].attributes[2].value);
+}
+
+#[test]
+fn test_game_tie_diff_stakes() {
+    let app = MtApp::new(|router, _api, storage| {
+        router
+            .bank
+            .init_balance(storage, &Addr::unchecked(PLAYER_1), coins(300, DENOM))
+            .unwrap();
+        router
+            .bank
+            .init_balance(storage, &Addr::unchecked(PLAYER_2), coins(300, DENOM))
+            .unwrap();
+        router
+            .bank
+            .init_balance(storage, &Addr::unchecked(PLAYER_3), coins(300, DENOM))
+            .unwrap();
+        router
+            .bank
+            .init_balance(storage, &Addr::unchecked(PLAYER_4), coins(300, DENOM))
+            .unwrap();
+    });
+    let app = App::new(app);
+
+    let code_id = CodeId::store_code(&app);
+
+    let blotto = code_id
+        .instantiate(InstantiateMsgData {
+            armies: vec![
+                ArmyInfo {
+                    name: "red".to_string(),
+                    description: Some("awesome army".to_string()),
+                    image_uri: Some("https://example.com/image.jpg".to_string()),
+                    ipfs_uri: None,
+                },
+                ArmyInfo {
+                    name: "blue".to_string(),
+                    description: Some("awesome army".to_string()),
+                    image_uri: Some("https://example.com/image.jpg".to_string()),
+                    ipfs_uri: None,
+                },
+            ],
+            battlefields: vec![
+                BattlefieldInfo {
+                    name: "The Citadel".to_string(),
+                    description: Some("awesome battlefield".to_string()),
+                    image_uri: Some("https://example.com/image.jpg".to_string()),
+                    ipfs_uri: None,
+                    value: 5,
+                },
+                BattlefieldInfo {
+                    name: "Forest Zone".to_string(),
+                    description: Some("awesome battlefield".to_string()),
+                    image_uri: Some("https://example.com/image.jpg".to_string()),
+                    ipfs_uri: None,
+                    value: 5,
+                },
+            ],
+            battle_duration: Timestamp::from_seconds(10000),
+            denom: DENOM.to_string(),
+        })
+        .with_label("cw-blotto contract")
+        .call(CREATOR)
+        .unwrap();
+
+    // Query armies and battlefields
+    let armies = blotto.armies().unwrap();
+    let battlefields = blotto.battlefields().unwrap();
+
+    // Players stake equally on different battlefields
+    blotto
+        .stake(armies[0].id, battlefields[0].id)
+        .with_funds(&coins(100, DENOM))
+        .call(PLAYER_1)
+        .unwrap();
+    blotto
+        .stake(armies[1].id, battlefields[0].id)
+        .with_funds(&coins(50, DENOM))
+        .call(PLAYER_2)
+        .unwrap();
+    blotto
+        .stake(armies[0].id, battlefields[1].id)
+        .with_funds(&coins(50, DENOM))
+        .call(PLAYER_3)
+        .unwrap();
+    blotto
+        .stake(armies[1].id, battlefields[1].id)
+        .with_funds(&coins(100, DENOM))
+        .call(PLAYER_4)
+        .unwrap();
+
+    // Time passes
+    app.update_block(|b| b.time = b.time.plus_seconds(60 * 60 * 24));
+
+    // Tally succeeds
+    let res = blotto.tally().call(CREATOR).unwrap();
+    println!("RESULT {:?}", res);
+
+    // Check game phase has been updated
+    let phase = blotto.status().unwrap().game_phase;
+    assert_eq!(phase, GamePhase::Closed);
+
+    // Player 1 and 4 gets their stakes because they won the bf
+    // But no prize pool on top as game ended with a tie on victory points
+    let res = blotto.withdraw().call(PLAYER_1).unwrap();
+    assert_eq!("100".to_string(), res.events[1].attributes[2].value);
+
+    let res = blotto.withdraw().call(PLAYER_2).unwrap();
+    assert_eq!("0".to_string(), res.events[1].attributes[2].value);
+
+    let res = blotto.withdraw().call(PLAYER_3).unwrap();
+    assert_eq!("0".to_string(), res.events[1].attributes[2].value);
+
+    let res = blotto.withdraw().call(PLAYER_4).unwrap();
+    assert_eq!("100".to_string(), res.events[1].attributes[2].value);
 }
