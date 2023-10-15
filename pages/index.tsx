@@ -39,52 +39,45 @@ import {
 import { coin } from "@cosmjs/stargate";
 
 const BattleBar = (args: any) => {
-  let red = args.red;
-  let blue = args.blue;
 
-  // TODO probably a better way to handle this bar
-  let redWidth;
-  let blueWidth;
-  switch (true) {
-    // TODO this is broken
-    // Red is not zero but blue is, full red
-    case red !== "0" && blue === "0":
-      redWidth = "100%";
-      blueWidth = "100%";
-      break;
-    // blue is not zero but red is, full blue
-    case red === "0" && blue !== "0":
-      redWidth = "0%";
-      blueWidth = "100%";
-      break;
-    // TODO this is probably very wrong
-    // Neither are zero, find the ratio of red to blue
-    case red !== "0" && blue !== "0":
-      redWidth = `${Math.floor(((red / blue) * 100) / 2)}%`;
-      blueWidth = `${Math.floor(((blue / red) * 100) / 2)}%`;
-      break;
-    // Default to equal width
-    default:
-      redWidth = "50%";
-      blueWidth = "100%";
-  }
+  let red = parseFloat(args.red)
+  let blue = parseFloat(args.blue)
+  let total = red + blue
+  let redness = red*100/total
+  let blueness = blue*100/total
 
   return (
     <div
       className="Widget"
-      style={{ background: "#6060f0", width: blueWidth, color: "white" }}
+      style={{
+        background: "black",
+        width: "100%",
+        position: "relative",
+      }}
     >
       <div
         style={{
           background: "#f06060",
-          width: redWidth,
+          position: "absolute",
+          left: "0px",
+          width: `${redness}%`,
           display: "inline-block",
-          color: "white",
+          overflow: "hidden",
+          color:"white",
         }}
-      >
-        {red}
-      </div>{" "}
-      {blue}
+      >{red}</div>
+      <div
+        style={{
+          background: "#6060f0",          
+          position: "absolute",
+          left: `${redness}%`,
+          width: `${blueness}%`,
+          display: "inline-block",
+          overflow: "hidden",
+          color:"white",
+          direction:"rtl",
+        }}
+      ><nobr>{blue}</nobr></div>
     </div>
   );
 };
