@@ -36,6 +36,8 @@ pub struct InstantiateMsgData {
     pub battle_duration: Timestamp,
     /// The denom used for staking in this contract
     pub denom: String,
+    /// The optional start time for the game (requires nanoseconds)
+    pub start_time: Option<Timestamp>,
 }
 
 /// The struct representing this contract, holding all contract state.
@@ -115,6 +117,24 @@ impl BlottoContract<'_> {
             });
         }
 
+        // Default the game phase to not started
+        let mut phase: GamePhase = GamePhase::NotStarted;
+
+        // Check if the start_time is in the past
+        if let Some(start_time) = data.start_time {
+            if start_time.seconds() <= ctx.env.block.time.seconds() {
+                return Err(ContractError::InvalidStartTime {
+                    now: ctx.env.block.time.seconds(),
+                    start_time: start_time.seconds(),
+                });
+            }
+        } else {
+            phase = GamePhase::Open;
+        }
+
+        // Set the game phase
+        self.phase.save(ctx.deps.storage, &phase)?;
+
         // Initialize armies and set their totals to zero
         let mut i = 0;
         for army in data.armies {
@@ -159,16 +179,11 @@ impl BlottoContract<'_> {
             )?;
         }
 
-        // TODO support setting an optional start time
-        // Set gamephase to open
-        self.phase.save(ctx.deps.storage, &GamePhase::Open)?;
-
         // Save config
         self.config.save(
             ctx.deps.storage,
             &Config {
-                // TODO make start time an options
-                start: ctx.env.block.time,
+                start: data.start_time.unwrap_or(ctx.env.block.time),
                 battle_duration: data.battle_duration,
                 denom: data.denom,
             },
@@ -189,9 +204,21 @@ impl BlottoContract<'_> {
         // Load Config
         let config = self.config.load(ctx.deps.storage)?;
 
-        // Check game phase is open
-        if self.phase.load(ctx.deps.storage)? != GamePhase::Open {
-            return Err(ContractError::NotOpen {});
+        // Check if the game is open
+        match self.phase.load(ctx.deps.storage)? {
+            GamePhase::NotStarted => {
+                // Check if the start_time is in the past
+                if config.start.seconds() <= ctx.env.block.time.seconds() {
+                    // Update the game phase
+                    self.phase.save(ctx.deps.storage, &GamePhase::Open)?;
+                } else {
+                    return Err(ContractError::NotOpen {});
+                }
+            }
+            GamePhase::Closed => {
+                return Err(ContractError::NotOpen {});
+            }
+            GamePhase::Open => {}
         }
 
         // Validate proper denom was sent and get amount

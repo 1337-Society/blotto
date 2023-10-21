@@ -127,6 +127,17 @@
           "denom": {
             "description": "The denom used for staking in this contract",
             "type": "string"
+          },
+          "start_time": {
+            "description": "The optional start time for the game (requires nanoseconds)",
+            "anyOf": [
+              {
+                "$ref": "#/definitions/Timestamp"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "additionalProperties": false
