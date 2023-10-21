@@ -56,6 +56,6 @@ pub enum ContractError {
     #[error("{0}")]
     PaymentError(#[from] PaymentError),
 
-    #[error("Start time must be in the future (in nanos); current timestamp: {now}, got timestamp: {start_time}")]
+    #[error("Start time must be in the future; current block timestamp (in seconds): {now}, received start timestamp (in seconds): {start_time}")]
     InvalidStartTime { now: u64, start_time: u64 },
 }
