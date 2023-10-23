@@ -8,7 +8,7 @@ use sylvia::types::{ExecCtx, InstantiateCtx, QueryCtx};
 use crate::responses::{PlayerInfoResponse, StatusResponse};
 use crate::state::{
     army_idx, battlefield_id_idx, player_idx, Army, ArmyInfo, Battlefield, BattlefieldInfo, Config,
-    GamePhase, StakeIndexes, StakeInfo,
+    GamePhase, StakeIndexes, StakeInfo, StakingLimitConfig, StakingLimitInfo,
 };
 use crate::ContractError;
 
@@ -36,6 +36,8 @@ pub struct InstantiateMsgData {
     pub battle_duration: Timestamp,
     /// The denom used for staking in this contract
     pub denom: String,
+    /// The optional config for staking limits
+    pub staking_limit_config: Option<StakingLimitConfig>,
 }
 
 /// The struct representing this contract, holding all contract state.
@@ -58,6 +60,8 @@ pub struct BlottoContract<'a> {
     pub stakes: IndexedMap<'a, (u8, u8, &'a Addr), StakeInfo, StakeIndexes<'a>>,
     /// The winning army, set on game end
     pub winner: Item<'a, Army>,
+    /// The staking limits per user
+    pub limits: Map<'a, &'a Addr, StakingLimitInfo>,
 }
 
 /// The actual contract implementation, base cw721 logic is implemented in base.rs
@@ -81,6 +85,7 @@ impl BlottoContract<'_> {
             player_totals_by_army: Map::new("player_totals_by_army"),
             stakes: IndexedMap::new("stakes", indexes),
             winner: Item::new("winner"),
+            limits: Map::new("limits"),
         }
     }
 
@@ -171,6 +176,7 @@ impl BlottoContract<'_> {
                 start: ctx.env.block.time,
                 battle_duration: data.battle_duration,
                 denom: data.denom,
+                staking_limit_config: data.staking_limit_config,
             },
         )?;
 
@@ -196,6 +202,58 @@ impl BlottoContract<'_> {
 
         // Validate proper denom was sent and get amount
         let amount = must_pay(&ctx.info, &config.denom)?;
+
+        // Validate stake is within limit
+        if let Some(staking_limit_config) = config.staking_limit_config {
+            // Update the user's limit
+            self.limits.update(
+                ctx.deps.storage,
+                &ctx.info.sender,
+                |x| -> Result<_, ContractError> {
+                    let expiration = staking_limit_config.cooldown.after(&ctx.env.block);
+                    match x {
+                        Some(staking_limit_info) => {
+                            if staking_limit_info.expiration.is_expired(&ctx.env.block) {
+                                if amount > staking_limit_config.amount {
+                                    return Err(ContractError::StakingLimit {
+                                        amount: staking_limit_config.amount,
+                                        expiration,
+                                    });
+                                }
+
+                                Ok(StakingLimitInfo { amount, expiration })
+                            } else {
+                                let remainding_limit = staking_limit_config
+                                    .amount
+                                    .checked_sub(staking_limit_info.amount)?;
+
+                                if amount > remainding_limit {
+                                    return Err(ContractError::StakingLimit {
+                                        amount: remainding_limit,
+                                        expiration: staking_limit_info.expiration,
+                                    });
+                                }
+
+                                Ok(StakingLimitInfo {
+                                    amount: staking_limit_info.amount.checked_add(amount)?,
+                                    expiration: staking_limit_info.expiration,
+                                })
+                            }
+                        }
+                        None => {
+                            if amount > staking_limit_config.amount {
+                                return Err(ContractError::StakingLimit {
+                                    amount: staking_limit_config.amount,
+                                    expiration,
+                                });
+                            }
+
+                            Ok(StakingLimitInfo { amount, expiration })
+                        }
+                    }
+                },
+            )?;
+        }
 
         // Check if army exists and update total
         self.armies.update(
