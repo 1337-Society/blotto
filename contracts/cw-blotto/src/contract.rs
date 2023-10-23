@@ -63,7 +63,7 @@ pub struct BlottoContract<'a> {
     /// The winning army, set on game end
     pub winner: Item<'a, Army>,
     /// The staking limits per user
-    pub limits: Map<'a, &'a Addr, StakingLimitInfo>,
+    pub staking_limits: Map<'a, &'a Addr, StakingLimitInfo>,
 }
 
 /// The actual contract implementation, base cw721 logic is implemented in base.rs
@@ -87,7 +87,7 @@ impl BlottoContract<'_> {
             player_totals_by_army: Map::new("player_totals_by_army"),
             stakes: IndexedMap::new("stakes", indexes),
             winner: Item::new("winner"),
-            limits: Map::new("limits"),
+            staking_limits: Map::new("staking_limits"),
         }
     }
 
@@ -233,7 +233,7 @@ impl BlottoContract<'_> {
         // Validate stake is within limit
         if let Some(staking_limit_config) = config.staking_limit_config {
             // Update the user's limit
-            self.limits.update(
+            self.staking_limits.update(
                 ctx.deps.storage,
                 &ctx.info.sender,
                 |x| -> Result<_, ContractError> {
@@ -637,6 +637,19 @@ impl BlottoContract<'_> {
             game_phase: self.phase.load(ctx.deps.storage)?,
             winner: self.winner.may_load(ctx.deps.storage)?,
         })
+    }
+
+    #[msg(query)]
+    pub fn staking_limit_info(
+        &self,
+        ctx: QueryCtx,
+        player: String,
+    ) -> StdResult<Option<StakingLimitInfo>> {
+        let player_addr = ctx.deps.api.addr_validate(&player)?;
+
+        Ok(self
+            .staking_limits
+            .may_load(ctx.deps.storage, &player_addr)?)
     }
 }
 
