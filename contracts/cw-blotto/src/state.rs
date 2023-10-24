@@ -2,6 +2,7 @@ use cosmwasm_schema::cw_serde;
 use cosmwasm_std::Addr;
 use cosmwasm_std::{Timestamp, Uint128};
 use cw_storage_plus::{Index, IndexList, MultiIndex};
+use cw_utils::{Duration, Expiration};
 
 /// Army Info used for instantiation
 #[cw_serde]
@@ -81,6 +82,26 @@ pub struct Config {
     // /// TODO implment an optional fee for game creators
     // /// An optional fee collected for the game creator
     // pub fee: Option<Decimal>,
+    /// The optional staking limit config
+    pub staking_limit_config: Option<StakingLimitConfig>,
+}
+
+/// Staking limit configuration for the game
+#[cw_serde]
+pub struct StakingLimitConfig {
+    /// Limit of stake amount per cooldown
+    pub amount: Uint128,
+    /// Cooldown of staking
+    pub cooldown: Duration,
+}
+
+/// Staking limit info for a user
+#[cw_serde]
+pub struct StakingLimitInfo {
+    /// The amount a user has staked within a period
+    pub amount: Uint128,
+    /// The staking limit's expiration
+    pub expiration: Expiration,
 }
 
 /// The possible phases of the game

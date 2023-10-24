@@ -19,6 +19,7 @@ import {
   Button,
   useColorModeValue,
   useColorMode,
+  Box,
 } from "@chakra-ui/react";
 
 import { NavBar } from "../components/navbar";
@@ -77,7 +78,7 @@ const BattleBar = (args: any) => {
           color:"white",
           direction:"rtl",
         }}
-      ><nobr>{blue}</nobr></div>
+      ><Box whiteSpace="nowrap">{blue}</Box></div>
     </div>
   );
 };

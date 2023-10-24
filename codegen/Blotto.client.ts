@@ -6,7 +6,7 @@
 
 import { CosmWasmClient, SigningCosmWasmClient, ExecuteResult } from "@cosmjs/cosmwasm-stargate";
 import { Coin, StdFee } from "@cosmjs/amino";
-import { Timestamp, Uint64, InstantiateMsg, InstantiateMsgData, ArmyInfo, BattlefieldInfo, ExecuteMsg, ExecMsg, QueryMsg, QueryMsg1, Uint128, ArrayOfArmy, Army, Battlefield, ArrayOfBattlefield, Config, Addr, PlayerInfoResponse, StakeInfo, GamePhase, StatusResponse } from "./Blotto.types";
+import { Timestamp, Uint64, Uint128, Duration, InstantiateMsg, InstantiateMsgData, ArmyInfo, BattlefieldInfo, StakingLimitConfig, ExecuteMsg, ExecMsg, QueryMsg, QueryMsg1, ArrayOfArmy, Army, Battlefield, ArrayOfBattlefield, Config, Addr, PlayerInfoResponse, StakeInfo, GamePhase, StatusResponse } from "./Blotto.types";
 export interface BlottoReadOnlyInterface {
   contractAddress: string;
   armies: () => Promise<ArrayOfArmy>;

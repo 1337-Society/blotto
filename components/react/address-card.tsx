@@ -35,6 +35,12 @@ const SIZES = {
   },
 };
 
+const DEFAULT_MAX_LENGTH = {
+  lg: 14,
+  md: 16,
+  sm: 18,
+};
+
 export function stringTruncateFromCenter(str: string, maxLength: number) {
   const midChar = '…'; // character to insert into the center of the result
 
@@ -56,8 +62,8 @@ export function handleChangeColorModeValue(
 ) {
   if (colorMode === 'light') return light;
   if (colorMode === 'dark') return dark;
+  return light; // default to light
 }
-
 
 export const ConnectedShowAddress = ({
   address,
@@ -70,11 +76,6 @@ export const ConnectedShowAddress = ({
   const { hasCopied, onCopy } = useClipboard(address ? address : '');
   const [displayAddress, setDisplayAddress] = useState('');
   const { colorMode } = useColorMode();
-  const defaultMaxLength = {
-    lg: 14,
-    md: 16,
-    sm: 18,
-  };
 
   useEffect(() => {
     if (!address) setDisplayAddress('address not identified yet');
@@ -84,10 +85,10 @@ export const ConnectedShowAddress = ({
       setDisplayAddress(
         stringTruncateFromCenter(
           address,
-          defaultMaxLength[size as keyof typeof defaultMaxLength]
+          DEFAULT_MAX_LENGTH[size as keyof typeof DEFAULT_MAX_LENGTH]
         )
       );
-  }, [address]);
+  }, [address, maxDisplayLength, size]);
 
   return (
     <Button

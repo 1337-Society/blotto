@@ -6,6 +6,12 @@
 
 export type Timestamp = Uint64;
 export type Uint64 = string;
+export type Uint128 = string;
+export type Duration = {
+  height: number;
+} | {
+  time: number;
+};
 export interface InstantiateMsg {
   data: InstantiateMsgData;
   [k: string]: unknown;
@@ -15,6 +21,7 @@ export interface InstantiateMsgData {
   battle_duration: Timestamp;
   battlefields: BattlefieldInfo[];
   denom: string;
+  staking_limit_config?: StakingLimitConfig | null;
 }
 export interface ArmyInfo {
   description?: string | null;
@@ -28,6 +35,10 @@ export interface BattlefieldInfo {
   ipfs_uri?: string | null;
   name: string;
   value: number;
+}
+export interface StakingLimitConfig {
+  amount: Uint128;
+  cooldown: Duration;
 }
 export type ExecuteMsg = ExecMsg;
 export type ExecMsg = {
@@ -84,7 +95,6 @@ export type QueryMsg1 = {
     [k: string]: unknown;
   };
 };
-export type Uint128 = string;
 export type ArrayOfArmy = Army[];
 export interface Army {
   description?: string | null;
@@ -108,6 +118,7 @@ export type ArrayOfBattlefield = Battlefield[];
 export interface Config {
   battle_duration: Timestamp;
   denom: string;
+  staking_limit_config?: StakingLimitConfig | null;
   start: Timestamp;
 }
 export type Addr = string;

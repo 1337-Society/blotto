@@ -1,11 +1,11 @@
 use cosmwasm_std::{coins, Addr, Timestamp, Uint128};
-use cw_utils::PaymentError;
+use cw_utils::{Expiration, PaymentError};
 use sylvia::cw_multi_test::App as MtApp;
 use sylvia::multitest::App;
 
 use crate::{
     contract::{multitest_utils::CodeId, InstantiateMsgData},
-    state::{ArmyInfo, BattlefieldInfo, GamePhase},
+    state::{ArmyInfo, BattlefieldInfo, GamePhase, StakingLimitConfig},
     ContractError,
 };
 
@@ -50,6 +50,7 @@ fn test_instantiate_in_past() {
             battle_duration: Timestamp::from_seconds(100),
             denom: DENOM.to_string(),
             start_time: Some(Timestamp::from_seconds(1)),
+            staking_limit_config: None,
         })
         .with_label("cw-blotto contract")
         .call(CREATOR)
@@ -59,7 +60,13 @@ fn test_instantiate_in_past() {
     let now = app.app().block_info().time.seconds();
 
     // Assert that the start time is in the past
-    assert_eq!(err, ContractError::InvalidStartTime { now: now, start_time: 1 })
+    assert_eq!(
+        err,
+        ContractError::InvalidStartTime {
+            now: now,
+            start_time: 1
+        }
+    )
 }
 
 #[test]
@@ -102,6 +109,7 @@ fn test_instantiate_in_future() {
             battle_duration: Timestamp::from_seconds(100),
             denom: DENOM.to_string(),
             start_time: Some(start_time),
+            staking_limit_config: None,
         })
         .with_label("cw-blotto contract")
         .call(CREATOR)
@@ -145,7 +153,7 @@ fn test_instantiate_in_future() {
     app.update_block(|b| b.time = b.time.plus_seconds(100));
 
     // Tally the game
-    blotto.tally().call(PLAYER_1).unwrap();   
+    blotto.tally().call(PLAYER_1).unwrap();
 
     // Assert that the game is closed
     let phase = blotto.status().unwrap().game_phase;
@@ -177,6 +185,7 @@ fn test_instantiate_no_battlefields_fails() {
             battlefields: vec![],
             battle_duration: Timestamp::from_seconds(10000),
             denom: DENOM.to_string(),
+            staking_limit_config: None,
             start_time: None,
         })
         .with_label("cw-blotto contract")
@@ -207,6 +216,7 @@ fn test_instantiate_no_armies_fails() {
             }],
             battle_duration: Timestamp::from_seconds(10000),
             denom: DENOM.to_string(),
+            staking_limit_config: None,
             start_time: None,
         })
         .with_label("cw-blotto contract")
@@ -239,6 +249,7 @@ fn test_instantiate_one_army_fails() {
             }],
             battle_duration: Timestamp::from_seconds(10000),
             denom: DENOM.to_string(),
+            staking_limit_config: None,
             start_time: None,
         })
         .with_label("cw-blotto contract")
@@ -253,7 +264,7 @@ fn test_happy_path() {
     let app = MtApp::new(|router, _api, storage| {
         router
             .bank
-            .init_balance(storage, &Addr::unchecked(PLAYER_1), coins(300, DENOM))
+            .init_balance(storage, &Addr::unchecked(PLAYER_1), coins(1000, DENOM))
             .unwrap();
         router
             .bank
@@ -317,6 +328,10 @@ fn test_happy_path() {
             ],
             battle_duration: Timestamp::from_seconds(10000),
             denom: DENOM.to_string(),
+            staking_limit_config: Some(StakingLimitConfig {
+                amount: Uint128::from(250u128),
+                cooldown: cw_utils::Duration::Height(10u64),
+            }),
             start_time: None,
         })
         .with_label("cw-blotto contract")
@@ -340,6 +355,21 @@ fn test_happy_path() {
         .unwrap_err();
 
     assert_eq!(err, ContractError::PaymentError(PaymentError::NoFunds {}));
+
+    // Staking over the limit fails
+    let err = blotto
+        .stake(armies[0].id, battlefields[0].id)
+        .with_funds(&coins(251, DENOM))
+        .call(PLAYER_1)
+        .unwrap_err();
+
+    assert_eq!(
+        err,
+        ContractError::StakingLimit {
+            amount: Uint128::from(250u128),
+            expiration: Expiration::AtHeight(12355u64)
+        }
+    );
 
     // Players stake on different battlefields
     blotto
@@ -367,6 +397,38 @@ fn test_happy_path() {
         .with_funds(&coins(200, DENOM))
         .call(PLAYER_5)
         .unwrap();
+
+    // Cannot stake over the limit within period
+    let err = blotto
+        .stake(armies[0].id, battlefields[0].id)
+        .with_funds(&coins(101, DENOM))
+        .call(PLAYER_1)
+        .unwrap_err();
+
+    assert_eq!(
+        err,
+        ContractError::StakingLimit {
+            amount: Uint128::from(100u128),
+            expiration: Expiration::AtHeight(12355u64)
+        }
+    );
+
+    // Ensure limit resets after expiration
+    app.update_block(|x| x.height += 10);
+
+    let err = blotto
+        .stake(armies[0].id, battlefields[0].id)
+        .with_funds(&coins(251, DENOM))
+        .call(PLAYER_1)
+        .unwrap_err();
+
+    assert_eq!(
+        err,
+        ContractError::StakingLimit {
+            amount: Uint128::from(250u128),
+            expiration: Expiration::AtHeight(12365u64)
+        }
+    );
 
     // Test army total query
     let res = blotto
@@ -494,6 +556,7 @@ fn test_tie() {
             ],
             battle_duration: Timestamp::from_seconds(10000),
             denom: DENOM.to_string(),
+            staking_limit_config: None,
             start_time: None,
         })
         .with_label("cw-blotto contract")
