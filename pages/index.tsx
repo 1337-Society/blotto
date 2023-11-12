@@ -283,6 +283,11 @@ export default function Home() {
 
   // TODO show staked totals for each army (armies query already has the total)
 
+  // uh... why divide by 100000 ? @todo
+  let end = new Date(); 
+  if(config && config.start) end.setTime( (parseInt(config.start)+parseInt(config.battle_duration)) / 1000000) ;
+  end = end.toLocaleDateString("en-US");
+
   if(gamePhase == "closed" || gamePhase =="not_started") {
     return (
       <Container maxW="3xl" py={10}>
@@ -347,7 +352,7 @@ export default function Home() {
 
 
           <Text fontFamily={'kablammo'} fontSize={"64"}>
-            GAME PHASE IS OPEN
+            GAME PHASE IS OPEN TILL {end}
           </Text>
 
             {battlefields.map((entry, key) => (
