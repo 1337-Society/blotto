@@ -284,7 +284,7 @@ export default function Home() {
   // TODO show staked totals for each army (armies query already has the total)
 
   // uh... why divide by 100000 ? @todo
-  let end = new Date(); 
+  let end : any = new Date(); 
   if(config && config.start) end.setTime( (parseInt(config.start)+parseInt(config.battle_duration)) / 1000000) ;
   end = end.toLocaleDateString("en-US");
 
