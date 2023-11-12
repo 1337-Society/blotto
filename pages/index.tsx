@@ -207,6 +207,13 @@ export default function Home() {
   const [blotto, setBlotto] = useState<BlottoClient>();
   const [playerInfo, setPlayerInfo] = useState<PlayerInfoResponse>();
   const [gamePhase, setGamePhase] = useState<any>({});
+  const [tally, setTally] = useState<any>(
+                                  {
+                                    winner_name: "nobody",
+                                    winner_id: "0",
+                                    prize_pool: "0"
+                                  }
+                                );
 
   // TODO do this properly with chakra UI themes, or switch UI framework
   // Hack to force dark mode
@@ -257,6 +264,11 @@ export default function Home() {
       if (context.address) {
         setPlayerInfo(await blotto.playerInfo({ player: context.address }));
       }
+      try {
+        setTally(await blotto.tally());
+      } catch(e) {
+        console.error("Cannot tally ",e);
+      }
     };
     getData();
   }, [context]);
@@ -268,16 +280,6 @@ export default function Home() {
   // TODO show countdown with how much time is left
 
   // TODO show staked totals for each army (armies query already has the total)
-
-  // Get the prize pool - todo - this should be visible prior to ending play
-  let tally : any = {
-    winner_name: "nobody",
-    winner_id: "0",
-    prize_pool: "0"
-  }
-  if(gamePhase == "closed") {
-    tally = blotto.tally() 
-  }
 
   if(gamePhase != "open") {
     return (
