@@ -264,11 +264,13 @@ export default function Home() {
       if (context.address) {
         setPlayerInfo(await blotto.playerInfo({ player: context.address }));
       }
+      /* nope - tally costs money - we can't do this.
       try {
         setTally(await blotto.tally());
       } catch(e) {
         console.error("Cannot tally ",e);
       }
+      */
     };
     getData();
   }, [context]);
