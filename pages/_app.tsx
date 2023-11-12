@@ -15,7 +15,13 @@ import "@interchain-ui/react/styles";
 //import { getSigningCosmosClientOptions } from "interchain";
 //import { wallets } from '@cosmos-kit/keplr';
 
-function CreateCosmosApp({ Component, pageProps }: AppProps) {
+function CreateCosmosApp(args: any) {
+
+  // { Component, pageProps }: AppProps. <- this is no longer legal since |null is not legal
+
+  const Component : any = args.Component
+  const pageProps : any = args.pageProps
+
   const signerOptions: SignerOptions = {
     //signingStargate: (chain: Chain) => {
     //  return getSigningCosmosClientOptions();
