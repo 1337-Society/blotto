@@ -36,6 +36,7 @@ import {
   Config,
   PlayerInfoResponse,
   StakeInfo,
+  GamePhase,
 } from "../codegen/Blotto.types";
 import { coin } from "@cosmjs/stargate";
 
@@ -205,6 +206,7 @@ export default function Home() {
   const [config, setConfig] = useState<Config>();
   const [blotto, setBlotto] = useState<BlottoClient>();
   const [playerInfo, setPlayerInfo] = useState<PlayerInfoResponse>();
+  const [gamePhase, setGamePhase] = useState<any>({});
 
   // TODO do this properly with chakra UI themes, or switch UI framework
   // Hack to force dark mode
@@ -250,26 +252,83 @@ export default function Home() {
       setConfig(await blotto.config());
       setArmies(await blotto.armies());
       setBattlefields(await blotto.battlefields());
-      if (context.address)
+      const results = await blotto.status();
+      setGamePhase(results.game_phase)
+      if (context.address) {
         setPlayerInfo(await blotto.playerInfo({ player: context.address }));
+      }
     };
     getData();
   }, [context]);
+
+  // TODO Show Current Game Phase in a more pretty way
+
+  // TODO show total - also show this prior to end of play
 
   // TODO show countdown with how much time is left
 
   // TODO show staked totals for each army (armies query already has the total)
 
+  // Get the prize pool - todo - this should be visible prior to ending play
+  let tally : any = {
+    winner_name: "nobody",
+    winner_id: "0",
+    prize_pool: "0"
+  }
+  if(gamePhase == "closed") {
+    tally = blotto.tally() 
+  }
+
+  if(gamePhase != "open") {
+    return (
+      <Container maxW="3xl" py={10}>
+        <Head>
+          <title>Blotto : {gamePhase+""}</title>
+          <meta name="description" content="Blotto on chain" />
+          <link rel="icon" href="/favicon.ico" />
+        </Head>
+        <NavBar></NavBar>
+        <br />
+
+
+        <Center>
+          <ContractsProvider
+            contractsConfig={{
+              address: context.address,
+              getCosmWasmClient: context.getCosmWasmClient,
+              getSigningCosmWasmClient: context.getSigningCosmWasmClient,
+            }}
+          >
+
+            <VStack>
+
+              <Text fontFamily={'kablammo'} fontSize={"64"}>
+                GAME PHASE IS CLOSED
+                <br/>
+                WINNER IS {tally.winner_name+""}
+                <br/>
+                PRIZE {tally.prize_pool+""}
+              </Text>
+
+            </VStack>
+          </ContractsProvider>
+        </Center>
+
+      </Container>
+    )
+  }
+
   return (
     <Container maxW="3xl" py={10}>
       <Head>
-        <title>Blotto</title>
+        <title>Blotto : {gamePhase+""}</title>
         <meta name="description" content="Blotto on chain" />
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
       <NavBar></NavBar>
       <br />
+
 
       <Center>
         <ContractsProvider
@@ -279,7 +338,14 @@ export default function Home() {
             getSigningCosmWasmClient: context.getSigningCosmWasmClient,
           }}
         >
+
           <VStack>
+
+
+          <Text fontFamily={'kablammo'} fontSize={"64"}>
+            GAME PHASE IS OPEN
+          </Text>
+
             {battlefields.map((entry, key) => (
               <BattleCard
                 key={key}
