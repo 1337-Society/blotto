@@ -281,7 +281,7 @@ export default function Home() {
 
   // TODO show staked totals for each army (armies query already has the total)
 
-  if(gamePhase != "open") {
+  if(gamePhase == "closed" || gamePhase =="not_started") {
     return (
       <Container maxW="3xl" py={10}>
         <Head>
