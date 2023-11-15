@@ -647,9 +647,7 @@ impl BlottoContract<'_> {
     ) -> StdResult<Option<StakingLimitInfo>> {
         let player_addr = ctx.deps.api.addr_validate(&player)?;
 
-        Ok(self
-            .staking_limits
-            .may_load(ctx.deps.storage, &player_addr)?)
+        self.staking_limits.may_load(ctx.deps.storage, &player_addr)
     }
 }
 
