@@ -1,0 +1,48 @@
+on: [push, pull_request]
+
+name: Basic
+
+jobs:
+  test:
+    defaults:
+      run:
+        working-directory: contracts/cw-blotto
+    name: Test Suite
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          target: wasm32-unknown-unknown
+      - name: cargo unit-test
+        run: cargo unit-test --locked
+        env:
+          RUST_BACKTRACE: 1
+
+  # Check formatting with rustfmt
+  formatting:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # Ensure rustfmt is installed and setup problem matcher
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          components: rustfmt
+      - name: rustfmt
+        uses: actions-rust-lang/rustfmt@v1
+        with:
+          manifest-path: contracts/cw-blotto/Cargo.toml
+  lints:
+    defaults:
+      run:
+        working-directory: contracts/cw-blotto
+    name: Lints
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          components: clippy
+      - name: cargo clippy
+        run: cargo clippy -- -D warnings
+
