@@ -18,6 +18,8 @@ jobs:
         run: cargo unit-test --locked
         env:
           RUST_BACKTRACE: 1
+      - name: Compile WASM contract
+        run: cargo wasm --lib --locked
 
   # Check formatting with rustfmt
   formatting:
