@@ -22,6 +22,7 @@ export interface InstantiateMsgData {
   battlefields: BattlefieldInfo[];
   denom: string;
   staking_limit_config?: StakingLimitConfig | null;
+  start_time?: Timestamp | null;
 }
 export interface ArmyInfo {
   description?: string | null;
@@ -94,6 +95,11 @@ export type QueryMsg1 = {
   status: {
     [k: string]: unknown;
   };
+} | {
+  staking_limit_info: {
+    player: string;
+    [k: string]: unknown;
+  };
 };
 export type ArrayOfArmy = Army[];
 export interface Army {
@@ -130,6 +136,18 @@ export interface StakeInfo {
   army: number;
   battlefield_id: number;
   player: Addr;
+}
+export type NullableStakingLimitInfo = StakingLimitInfo | null;
+export type Expiration = {
+  at_height: number;
+} | {
+  at_time: Timestamp;
+} | {
+  never: {};
+};
+export interface StakingLimitInfo {
+  amount: Uint128;
+  expiration: Expiration;
 }
 export type GamePhase = "not_started" | "open" | "closed";
 export interface StatusResponse {

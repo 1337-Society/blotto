@@ -7,7 +7,7 @@
 import { UseQueryOptions, useQuery, useMutation, UseMutationOptions } from "@tanstack/react-query";
 import { ExecuteResult } from "@cosmjs/cosmwasm-stargate";
 import { StdFee, Coin } from "@cosmjs/amino";
-import { Timestamp, Uint64, Uint128, Duration, InstantiateMsg, InstantiateMsgData, ArmyInfo, BattlefieldInfo, StakingLimitConfig, ExecuteMsg, ExecMsg, QueryMsg, QueryMsg1, ArrayOfArmy, Army, Battlefield, ArrayOfBattlefield, Config, Addr, PlayerInfoResponse, StakeInfo, GamePhase, StatusResponse } from "./Blotto.types";
+import { Timestamp, Uint64, Uint128, Duration, InstantiateMsg, InstantiateMsgData, ArmyInfo, BattlefieldInfo, StakingLimitConfig, ExecuteMsg, ExecMsg, QueryMsg, QueryMsg1, ArrayOfArmy, Army, Battlefield, ArrayOfBattlefield, Config, Addr, PlayerInfoResponse, StakeInfo, NullableStakingLimitInfo, Expiration, StakingLimitInfo, GamePhase, StatusResponse } from "./Blotto.types";
 import { BlottoQueryClient, BlottoClient } from "./Blotto.client";
 export const blottoQueryKeys = {
   contract: ([{
@@ -46,6 +46,10 @@ export const blottoQueryKeys = {
   }] as const),
   status: (contractAddress: string | undefined, args?: Record<string, unknown>) => ([{ ...blottoQueryKeys.address(contractAddress)[0],
     method: "status",
+    args
+  }] as const),
+  stakingLimitInfo: (contractAddress: string | undefined, args?: Record<string, unknown>) => ([{ ...blottoQueryKeys.address(contractAddress)[0],
+    method: "staking_limit_info",
     args
   }] as const)
 };
@@ -134,6 +138,18 @@ export const blottoQueries = {
     queryFn: () => client ? client.status() : Promise.reject(new Error("Invalid client")),
     ...options,
     enabled: !!client && (options?.enabled != undefined ? options.enabled : true)
+  }),
+  stakingLimitInfo: <TData = NullableStakingLimitInfo,>({
+    client,
+    args,
+    options
+  }: BlottoStakingLimitInfoQuery<TData>): UseQueryOptions<NullableStakingLimitInfo, Error, TData> => ({
+    queryKey: blottoQueryKeys.stakingLimitInfo(client?.contractAddress, args),
+    queryFn: () => client ? client.stakingLimitInfo({
+      player: args.player
+    }) : Promise.reject(new Error("Invalid client")),
+    ...options,
+    enabled: !!client && (options?.enabled != undefined ? options.enabled : true)
   })
 };
 export interface BlottoReactQuery<TResponse, TData = TResponse> {
@@ -141,6 +157,22 @@ export interface BlottoReactQuery<TResponse, TData = TResponse> {
   options?: Omit<UseQueryOptions<TResponse, Error, TData>, "'queryKey' | 'queryFn' | 'initialData'"> & {
     initialData?: undefined;
   };
+}
+export interface BlottoStakingLimitInfoQuery<TData> extends BlottoReactQuery<NullableStakingLimitInfo, TData> {
+  args: {
+    player: string;
+  };
+}
+export function useBlottoStakingLimitInfoQuery<TData = NullableStakingLimitInfo>({
+  client,
+  args,
+  options
+}: BlottoStakingLimitInfoQuery<TData>) {
+  return useQuery<NullableStakingLimitInfo, Error, TData>(blottoQueryKeys.stakingLimitInfo(client?.contractAddress, args), () => client ? client.stakingLimitInfo({
+    player: args.player
+  }) : Promise.reject(new Error("Invalid client")), { ...options,
+    enabled: !!client && (options?.enabled != undefined ? options.enabled : true)
+  });
 }
 export interface BlottoStatusQuery<TData> extends BlottoReactQuery<StatusResponse, TData> {}
 export function useBlottoStatusQuery<TData = StatusResponse>({

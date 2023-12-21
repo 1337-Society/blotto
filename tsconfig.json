@@ -17,7 +17,13 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "preserve",
-    "incremental": true
+    "incremental": true,
+  },
+  "ts-node": {
+    "transpileOnly": true,
+    "moduleTypes": {
+      "config.cts":"cjs"
+    }
   },
   "include": [
     "next-env.d.ts",

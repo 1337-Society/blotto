@@ -41,12 +41,11 @@ import {
 import { coin } from "@cosmjs/stargate";
 
 const BattleBar = (args: any) => {
-
-  let red = parseFloat(args.red)
-  let blue = parseFloat(args.blue)
-  let total = red + blue
-  let redness = red*100/total
-  let blueness = blue*100/total
+  let red = parseFloat(args.red);
+  let blue = parseFloat(args.blue);
+  let total = red + blue;
+  let redness = (red * 100) / total;
+  let blueness = (blue * 100) / total;
 
   return (
     <div
@@ -65,21 +64,25 @@ const BattleBar = (args: any) => {
           width: `${redness}%`,
           display: "inline-block",
           overflow: "hidden",
-          color:"white",
+          color: "white",
         }}
-      >{red}</div>
+      >
+        {red}
+      </div>
       <div
         style={{
-          background: "#6060f0",          
+          background: "#6060f0",
           position: "absolute",
           left: `${redness}%`,
           width: `${blueness}%`,
           display: "inline-block",
           overflow: "hidden",
-          color:"white",
-          direction:"rtl",
+          color: "white",
+          direction: "rtl",
         }}
-      ><Box whiteSpace="nowrap">{blue}</Box></div>
+      >
+        <Box whiteSpace="nowrap">{blue}</Box>
+      </div>
     </div>
   );
 };
@@ -206,14 +209,12 @@ export default function Home() {
   const [config, setConfig] = useState<Config>();
   const [blotto, setBlotto] = useState<BlottoClient>();
   const [playerInfo, setPlayerInfo] = useState<PlayerInfoResponse>();
-  const [gamePhase, setGamePhase] = useState<any>({});
-  const [tally, setTally] = useState<any>(
-                                  {
-                                    winner_name: "nobody",
-                                    winner_id: "0",
-                                    prize_pool: "0"
-                                  }
-                                );
+  const [gamePhase, setGamePhase] = useState<string | undefined>(undefined);
+  const [tally, setTally] = useState<any>({
+    winner_name: "nobody",
+    winner_id: "0",
+    prize_pool: "0",
+  });
 
   // TODO do this properly with chakra UI themes, or switch UI framework
   // Hack to force dark mode
@@ -260,7 +261,7 @@ export default function Home() {
       setArmies(await blotto.armies());
       setBattlefields(await blotto.battlefields());
       const results = await blotto.status();
-      setGamePhase(results.game_phase)
+      setGamePhase(results.game_phase);
       if (context.address) {
         setPlayerInfo(await blotto.playerInfo({ player: context.address }));
       }
@@ -284,21 +285,23 @@ export default function Home() {
   // TODO show staked totals for each army (armies query already has the total)
 
   // uh... why divide by 100000 ? @todo
-  let end : any = new Date(); 
-  if(config && config.start) end.setTime( (parseInt(config.start)+parseInt(config.battle_duration)) / 1000000) ;
+  let end: any = new Date();
+  if (config && config.start)
+    end.setTime(
+      (parseInt(config.start) + parseInt(config.battle_duration)) / 1000000
+    );
   end = end.toLocaleDateString("en-US");
 
-  if(gamePhase == "closed" || gamePhase =="not_started") {
+  if (gamePhase == "closed" || gamePhase == "not_started") {
     return (
       <Container maxW="3xl" py={10}>
         <Head>
-          <title>Blotto : {gamePhase+""}</title>
+          <title>Blotto : {gamePhase}</title>
           <meta name="description" content="Blotto on chain" />
           <link rel="icon" href="/favicon.ico" />
         </Head>
         <NavBar></NavBar>
         <br />
-
 
         <Center>
           <ContractsProvider
@@ -308,36 +311,36 @@ export default function Home() {
               getSigningCosmWasmClient: context.getSigningCosmWasmClient,
             }}
           >
-
             <VStack>
-
-              <Text fontFamily={'kablammo'} fontSize={"64"}>
+              <Text fontFamily={"kablammo"} fontSize={"64"}>
                 GAME PHASE IS CLOSED
-                <br/>
-                WINNER IS {tally.winner_name+""}
-                <br/>
-                PRIZE {tally.prize_pool+""}
+                <br />
+                WINNER IS {tally.winner_name + ""}
+                <br />
+                PRIZE {tally.prize_pool + ""}
               </Text>
-
             </VStack>
           </ContractsProvider>
         </Center>
-
       </Container>
-    )
+    );
   }
 
   return (
     <Container maxW="3xl" py={10}>
       <Head>
-        <title>Blotto : {gamePhase+""}</title>
+        {gamePhase ? (
+          <title>Blotto : {gamePhase}</title>
+        ) : (
+          <title>Blotto</title>
+        )}
+
         <meta name="description" content="Blotto on chain" />
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
       <NavBar></NavBar>
       <br />
-
 
       <Center>
         <ContractsProvider
@@ -347,13 +350,10 @@ export default function Home() {
             getSigningCosmWasmClient: context.getSigningCosmWasmClient,
           }}
         >
-
           <VStack>
-
-
-          <Text fontFamily={'kablammo'} fontSize={"64"}>
-            GAME PHASE IS OPEN TILL {end}
-          </Text>
+            <Text fontFamily={"kablammo"} fontSize={"64"}>
+              GAME PHASE IS OPEN TILL {end}
+            </Text>
 
             {battlefields.map((entry, key) => (
               <BattleCard
