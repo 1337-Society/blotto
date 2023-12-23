@@ -17,8 +17,8 @@ export function NavBar() {
 
     <header>
 
-        <Flex flex={{ base: 1 }} justify={{ base: 'center', md: 'start' }}>
-          <Text fontFamily={'kablammo'} fontSize={"64"}>
+        <Flex flex={{ base: 1}} justify={{ base: 'center', md: 'start' }} >
+          <Text fontFamily={'kablammo'} fontSize={"64"} color={'white'}>
             BLOTTO
           </Text>
         </Flex>
@@ -27,6 +27,7 @@ export function NavBar() {
           flex={{ base: 1, md: 0 }}
           justify={'flex-end'}
           direction={'row'}
+          color={'white'}
           >
           <WalletSection></WalletSection>
         </Stack>

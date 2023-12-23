@@ -159,6 +159,7 @@ export const ConnectedShowAddress = ({
         fontWeight="normal"
         letterSpacing="0.4px"
         opacity={0.75}
+        color="lightgray"
       >
         {displayAddress}
       </Text>

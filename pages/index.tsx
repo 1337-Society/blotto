@@ -327,7 +327,7 @@ export default function Home() {
   }
 
   return (
-    <Container maxW="3xl" py={10}>
+    <Container maxW="3xl" pb={10} >
       <Head>
         {gamePhase ? (
           <title>Blotto : {gamePhase}</title>
