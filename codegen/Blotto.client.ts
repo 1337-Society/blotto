@@ -6,7 +6,7 @@
 
 import { CosmWasmClient, SigningCosmWasmClient, ExecuteResult } from "@cosmjs/cosmwasm-stargate";
 import { Coin, StdFee } from "@cosmjs/amino";
-import { Timestamp, Uint64, InstantiateMsg, InstantiateMsgData, ArmyInfo, BattlefieldInfo, ExecuteMsg, ExecMsg, QueryMsg, QueryMsg1, Uint128, ArrayOfArmy, Army, Battlefield, ArrayOfBattlefield, Config, Addr, PlayerInfoResponse, StakeInfo, GamePhase, StatusResponse } from "./Blotto.types";
+import { Timestamp, Uint64, Uint128, Duration, InstantiateMsg, InstantiateMsgData, ArmyInfo, BattlefieldInfo, StakingLimitConfig, ExecuteMsg, ExecMsg, QueryMsg, QueryMsg1, ArrayOfArmy, Army, Battlefield, ArrayOfBattlefield, Config, Addr, PlayerInfoResponse, StakeInfo, NullableStakingLimitInfo, Expiration, StakingLimitInfo, GamePhase, StatusResponse } from "./Blotto.types";
 export interface BlottoReadOnlyInterface {
   contractAddress: string;
   armies: () => Promise<ArrayOfArmy>;
@@ -35,6 +35,11 @@ export interface BlottoReadOnlyInterface {
     player: string;
   }) => Promise<PlayerInfoResponse>;
   status: () => Promise<StatusResponse>;
+  stakingLimitInfo: ({
+    player
+  }: {
+    player: string;
+  }) => Promise<NullableStakingLimitInfo>;
 }
 export class BlottoQueryClient implements BlottoReadOnlyInterface {
   client: CosmWasmClient;
@@ -51,6 +56,7 @@ export class BlottoQueryClient implements BlottoReadOnlyInterface {
     this.config = this.config.bind(this);
     this.playerInfo = this.playerInfo.bind(this);
     this.status = this.status.bind(this);
+    this.stakingLimitInfo = this.stakingLimitInfo.bind(this);
   }
 
   armies = async (): Promise<ArrayOfArmy> => {
@@ -118,6 +124,17 @@ export class BlottoQueryClient implements BlottoReadOnlyInterface {
   status = async (): Promise<StatusResponse> => {
     return this.client.queryContractSmart(this.contractAddress, {
       status: {}
+    });
+  };
+  stakingLimitInfo = async ({
+    player
+  }: {
+    player: string;
+  }): Promise<NullableStakingLimitInfo> => {
+    return this.client.queryContractSmart(this.contractAddress, {
+      staking_limit_info: {
+        player
+      }
     });
   };
 }

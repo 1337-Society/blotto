@@ -1,0 +1,3 @@
+{
+    "rust-analyzer.linkedProjects": ["contracts\\cw-blotto\\Cargo.toml"]
+}

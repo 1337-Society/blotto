@@ -1,5 +1,5 @@
-use cosmwasm_std::{DivideByZeroError, OverflowError, StdError};
-use cw_utils::PaymentError;
+use cosmwasm_std::{DivideByZeroError, OverflowError, StdError, Uint128};
+use cw_utils::{Expiration, PaymentError};
 use thiserror::Error;
 
 /// Custom errors for this contract
@@ -53,6 +53,15 @@ pub enum ContractError {
     #[error("Can only stake on one side in a battlefield")]
     Traitor {},
 
+    #[error("Cannot stake over the limit or cooldown")]
+    StakingLimit {
+        amount: Uint128,
+        expiration: Expiration,
+    },
+
     #[error("{0}")]
     PaymentError(#[from] PaymentError),
+
+    #[error("Start time must be in the future; current block timestamp (in seconds): {now}, received start timestamp (in seconds): {start_time}")]
+    InvalidStartTime { now: u64, start_time: u64 },
 }

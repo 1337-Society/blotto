@@ -4,21 +4,182 @@
 * and run the @cosmwasm/ts-codegen generate command to regenerate this file.
 */
 
-import { UseQueryOptions, useQuery } from "@tanstack/react-query";
-import { Timestamp, Uint64, InstantiateMsg, InstantiateMsgData, ArmyInfo, BattlefieldInfo, ExecuteMsg, ExecMsg, QueryMsg, QueryMsg1, Uint128, ArrayOfArmy, Army, Battlefield, ArrayOfBattlefield, Config, Addr, PlayerInfoResponse, StakeInfo, GamePhase, StatusResponse } from "./Blotto.types";
-import { BlottoQueryClient } from "./Blotto.client";
+import { UseQueryOptions, useQuery, useMutation, UseMutationOptions } from "@tanstack/react-query";
+import { ExecuteResult } from "@cosmjs/cosmwasm-stargate";
+import { StdFee, Coin } from "@cosmjs/amino";
+import { Timestamp, Uint64, Uint128, Duration, InstantiateMsg, InstantiateMsgData, ArmyInfo, BattlefieldInfo, StakingLimitConfig, ExecuteMsg, ExecMsg, QueryMsg, QueryMsg1, ArrayOfArmy, Army, Battlefield, ArrayOfBattlefield, Config, Addr, PlayerInfoResponse, StakeInfo, NullableStakingLimitInfo, Expiration, StakingLimitInfo, GamePhase, StatusResponse } from "./Blotto.types";
+import { BlottoQueryClient, BlottoClient } from "./Blotto.client";
+export const blottoQueryKeys = {
+  contract: ([{
+    contract: "blotto"
+  }] as const),
+  address: (contractAddress: string | undefined) => ([{ ...blottoQueryKeys.contract[0],
+    address: contractAddress
+  }] as const),
+  armies: (contractAddress: string | undefined, args?: Record<string, unknown>) => ([{ ...blottoQueryKeys.address(contractAddress)[0],
+    method: "armies",
+    args
+  }] as const),
+  army: (contractAddress: string | undefined, args?: Record<string, unknown>) => ([{ ...blottoQueryKeys.address(contractAddress)[0],
+    method: "army",
+    args
+  }] as const),
+  armyTotalsByBattlefield: (contractAddress: string | undefined, args?: Record<string, unknown>) => ([{ ...blottoQueryKeys.address(contractAddress)[0],
+    method: "army_totals_by_battlefield",
+    args
+  }] as const),
+  battlefield: (contractAddress: string | undefined, args?: Record<string, unknown>) => ([{ ...blottoQueryKeys.address(contractAddress)[0],
+    method: "battlefield",
+    args
+  }] as const),
+  battlefields: (contractAddress: string | undefined, args?: Record<string, unknown>) => ([{ ...blottoQueryKeys.address(contractAddress)[0],
+    method: "battlefields",
+    args
+  }] as const),
+  config: (contractAddress: string | undefined, args?: Record<string, unknown>) => ([{ ...blottoQueryKeys.address(contractAddress)[0],
+    method: "config",
+    args
+  }] as const),
+  playerInfo: (contractAddress: string | undefined, args?: Record<string, unknown>) => ([{ ...blottoQueryKeys.address(contractAddress)[0],
+    method: "player_info",
+    args
+  }] as const),
+  status: (contractAddress: string | undefined, args?: Record<string, unknown>) => ([{ ...blottoQueryKeys.address(contractAddress)[0],
+    method: "status",
+    args
+  }] as const),
+  stakingLimitInfo: (contractAddress: string | undefined, args?: Record<string, unknown>) => ([{ ...blottoQueryKeys.address(contractAddress)[0],
+    method: "staking_limit_info",
+    args
+  }] as const)
+};
+export const blottoQueries = {
+  armies: <TData = ArrayOfArmy,>({
+    client,
+    options
+  }: BlottoArmiesQuery<TData>): UseQueryOptions<ArrayOfArmy, Error, TData> => ({
+    queryKey: blottoQueryKeys.armies(client?.contractAddress),
+    queryFn: () => client ? client.armies() : Promise.reject(new Error("Invalid client")),
+    ...options,
+    enabled: !!client && (options?.enabled != undefined ? options.enabled : true)
+  }),
+  army: <TData = Army,>({
+    client,
+    args,
+    options
+  }: BlottoArmyQuery<TData>): UseQueryOptions<Army, Error, TData> => ({
+    queryKey: blottoQueryKeys.army(client?.contractAddress, args),
+    queryFn: () => client ? client.army({
+      id: args.id
+    }) : Promise.reject(new Error("Invalid client")),
+    ...options,
+    enabled: !!client && (options?.enabled != undefined ? options.enabled : true)
+  }),
+  armyTotalsByBattlefield: <TData = Uint128,>({
+    client,
+    args,
+    options
+  }: BlottoArmyTotalsByBattlefieldQuery<TData>): UseQueryOptions<Uint128, Error, TData> => ({
+    queryKey: blottoQueryKeys.armyTotalsByBattlefield(client?.contractAddress, args),
+    queryFn: () => client ? client.armyTotalsByBattlefield({
+      armyId: args.armyId,
+      battlefieldId: args.battlefieldId
+    }) : Promise.reject(new Error("Invalid client")),
+    ...options,
+    enabled: !!client && (options?.enabled != undefined ? options.enabled : true)
+  }),
+  battlefield: <TData = Battlefield,>({
+    client,
+    args,
+    options
+  }: BlottoBattlefieldQuery<TData>): UseQueryOptions<Battlefield, Error, TData> => ({
+    queryKey: blottoQueryKeys.battlefield(client?.contractAddress, args),
+    queryFn: () => client ? client.battlefield({
+      id: args.id
+    }) : Promise.reject(new Error("Invalid client")),
+    ...options,
+    enabled: !!client && (options?.enabled != undefined ? options.enabled : true)
+  }),
+  battlefields: <TData = ArrayOfBattlefield,>({
+    client,
+    options
+  }: BlottoBattlefieldsQuery<TData>): UseQueryOptions<ArrayOfBattlefield, Error, TData> => ({
+    queryKey: blottoQueryKeys.battlefields(client?.contractAddress),
+    queryFn: () => client ? client.battlefields() : Promise.reject(new Error("Invalid client")),
+    ...options,
+    enabled: !!client && (options?.enabled != undefined ? options.enabled : true)
+  }),
+  config: <TData = Config,>({
+    client,
+    options
+  }: BlottoConfigQuery<TData>): UseQueryOptions<Config, Error, TData> => ({
+    queryKey: blottoQueryKeys.config(client?.contractAddress),
+    queryFn: () => client ? client.config() : Promise.reject(new Error("Invalid client")),
+    ...options,
+    enabled: !!client && (options?.enabled != undefined ? options.enabled : true)
+  }),
+  playerInfo: <TData = PlayerInfoResponse,>({
+    client,
+    args,
+    options
+  }: BlottoPlayerInfoQuery<TData>): UseQueryOptions<PlayerInfoResponse, Error, TData> => ({
+    queryKey: blottoQueryKeys.playerInfo(client?.contractAddress, args),
+    queryFn: () => client ? client.playerInfo({
+      player: args.player
+    }) : Promise.reject(new Error("Invalid client")),
+    ...options,
+    enabled: !!client && (options?.enabled != undefined ? options.enabled : true)
+  }),
+  status: <TData = StatusResponse,>({
+    client,
+    options
+  }: BlottoStatusQuery<TData>): UseQueryOptions<StatusResponse, Error, TData> => ({
+    queryKey: blottoQueryKeys.status(client?.contractAddress),
+    queryFn: () => client ? client.status() : Promise.reject(new Error("Invalid client")),
+    ...options,
+    enabled: !!client && (options?.enabled != undefined ? options.enabled : true)
+  }),
+  stakingLimitInfo: <TData = NullableStakingLimitInfo,>({
+    client,
+    args,
+    options
+  }: BlottoStakingLimitInfoQuery<TData>): UseQueryOptions<NullableStakingLimitInfo, Error, TData> => ({
+    queryKey: blottoQueryKeys.stakingLimitInfo(client?.contractAddress, args),
+    queryFn: () => client ? client.stakingLimitInfo({
+      player: args.player
+    }) : Promise.reject(new Error("Invalid client")),
+    ...options,
+    enabled: !!client && (options?.enabled != undefined ? options.enabled : true)
+  })
+};
 export interface BlottoReactQuery<TResponse, TData = TResponse> {
   client: BlottoQueryClient | undefined;
   options?: Omit<UseQueryOptions<TResponse, Error, TData>, "'queryKey' | 'queryFn' | 'initialData'"> & {
     initialData?: undefined;
   };
 }
+export interface BlottoStakingLimitInfoQuery<TData> extends BlottoReactQuery<NullableStakingLimitInfo, TData> {
+  args: {
+    player: string;
+  };
+}
+export function useBlottoStakingLimitInfoQuery<TData = NullableStakingLimitInfo>({
+  client,
+  args,
+  options
+}: BlottoStakingLimitInfoQuery<TData>) {
+  return useQuery<NullableStakingLimitInfo, Error, TData>(blottoQueryKeys.stakingLimitInfo(client?.contractAddress, args), () => client ? client.stakingLimitInfo({
+    player: args.player
+  }) : Promise.reject(new Error("Invalid client")), { ...options,
+    enabled: !!client && (options?.enabled != undefined ? options.enabled : true)
+  });
+}
 export interface BlottoStatusQuery<TData> extends BlottoReactQuery<StatusResponse, TData> {}
 export function useBlottoStatusQuery<TData = StatusResponse>({
   client,
   options
 }: BlottoStatusQuery<TData>) {
-  return useQuery<StatusResponse, Error, TData>(["blottoStatus", client?.contractAddress], () => client ? client.status() : Promise.reject(new Error("Invalid client")), { ...options,
+  return useQuery<StatusResponse, Error, TData>(blottoQueryKeys.status(client?.contractAddress), () => client ? client.status() : Promise.reject(new Error("Invalid client")), { ...options,
     enabled: !!client && (options?.enabled != undefined ? options.enabled : true)
   });
 }
@@ -32,7 +193,7 @@ export function useBlottoPlayerInfoQuery<TData = PlayerInfoResponse>({
   args,
   options
 }: BlottoPlayerInfoQuery<TData>) {
-  return useQuery<PlayerInfoResponse, Error, TData>(["blottoPlayerInfo", client?.contractAddress, JSON.stringify(args)], () => client ? client.playerInfo({
+  return useQuery<PlayerInfoResponse, Error, TData>(blottoQueryKeys.playerInfo(client?.contractAddress, args), () => client ? client.playerInfo({
     player: args.player
   }) : Promise.reject(new Error("Invalid client")), { ...options,
     enabled: !!client && (options?.enabled != undefined ? options.enabled : true)
@@ -43,7 +204,7 @@ export function useBlottoConfigQuery<TData = Config>({
   client,
   options
 }: BlottoConfigQuery<TData>) {
-  return useQuery<Config, Error, TData>(["blottoConfig", client?.contractAddress], () => client ? client.config() : Promise.reject(new Error("Invalid client")), { ...options,
+  return useQuery<Config, Error, TData>(blottoQueryKeys.config(client?.contractAddress), () => client ? client.config() : Promise.reject(new Error("Invalid client")), { ...options,
     enabled: !!client && (options?.enabled != undefined ? options.enabled : true)
   });
 }
@@ -52,7 +213,7 @@ export function useBlottoBattlefieldsQuery<TData = ArrayOfBattlefield>({
   client,
   options
 }: BlottoBattlefieldsQuery<TData>) {
-  return useQuery<ArrayOfBattlefield, Error, TData>(["blottoBattlefields", client?.contractAddress], () => client ? client.battlefields() : Promise.reject(new Error("Invalid client")), { ...options,
+  return useQuery<ArrayOfBattlefield, Error, TData>(blottoQueryKeys.battlefields(client?.contractAddress), () => client ? client.battlefields() : Promise.reject(new Error("Invalid client")), { ...options,
     enabled: !!client && (options?.enabled != undefined ? options.enabled : true)
   });
 }
@@ -66,7 +227,7 @@ export function useBlottoBattlefieldQuery<TData = Battlefield>({
   args,
   options
 }: BlottoBattlefieldQuery<TData>) {
-  return useQuery<Battlefield, Error, TData>(["blottoBattlefield", client?.contractAddress, JSON.stringify(args)], () => client ? client.battlefield({
+  return useQuery<Battlefield, Error, TData>(blottoQueryKeys.battlefield(client?.contractAddress, args), () => client ? client.battlefield({
     id: args.id
   }) : Promise.reject(new Error("Invalid client")), { ...options,
     enabled: !!client && (options?.enabled != undefined ? options.enabled : true)
@@ -83,7 +244,7 @@ export function useBlottoArmyTotalsByBattlefieldQuery<TData = Uint128>({
   args,
   options
 }: BlottoArmyTotalsByBattlefieldQuery<TData>) {
-  return useQuery<Uint128, Error, TData>(["blottoArmyTotalsByBattlefield", client?.contractAddress, JSON.stringify(args)], () => client ? client.armyTotalsByBattlefield({
+  return useQuery<Uint128, Error, TData>(blottoQueryKeys.armyTotalsByBattlefield(client?.contractAddress, args), () => client ? client.armyTotalsByBattlefield({
     armyId: args.armyId,
     battlefieldId: args.battlefieldId
   }) : Promise.reject(new Error("Invalid client")), { ...options,
@@ -100,7 +261,7 @@ export function useBlottoArmyQuery<TData = Army>({
   args,
   options
 }: BlottoArmyQuery<TData>) {
-  return useQuery<Army, Error, TData>(["blottoArmy", client?.contractAddress, JSON.stringify(args)], () => client ? client.army({
+  return useQuery<Army, Error, TData>(blottoQueryKeys.army(client?.contractAddress, args), () => client ? client.army({
     id: args.id
   }) : Promise.reject(new Error("Invalid client")), { ...options,
     enabled: !!client && (options?.enabled != undefined ? options.enabled : true)
@@ -111,7 +272,66 @@ export function useBlottoArmiesQuery<TData = ArrayOfArmy>({
   client,
   options
 }: BlottoArmiesQuery<TData>) {
-  return useQuery<ArrayOfArmy, Error, TData>(["blottoArmies", client?.contractAddress], () => client ? client.armies() : Promise.reject(new Error("Invalid client")), { ...options,
+  return useQuery<ArrayOfArmy, Error, TData>(blottoQueryKeys.armies(client?.contractAddress), () => client ? client.armies() : Promise.reject(new Error("Invalid client")), { ...options,
     enabled: !!client && (options?.enabled != undefined ? options.enabled : true)
   });
+}
+export interface BlottoWithdrawMutation {
+  client: BlottoClient;
+  args?: {
+    fee?: number | StdFee | "auto";
+    memo?: string;
+    funds?: Coin[];
+  };
+}
+export function useBlottoWithdrawMutation(options?: Omit<UseMutationOptions<ExecuteResult, Error, BlottoWithdrawMutation>, "mutationFn">) {
+  return useMutation<ExecuteResult, Error, BlottoWithdrawMutation>(({
+    client,
+    args: {
+      fee,
+      memo,
+      funds
+    } = {}
+  }) => client.withdraw(fee, memo, funds), options);
+}
+export interface BlottoTallyMutation {
+  client: BlottoClient;
+  args?: {
+    fee?: number | StdFee | "auto";
+    memo?: string;
+    funds?: Coin[];
+  };
+}
+export function useBlottoTallyMutation(options?: Omit<UseMutationOptions<ExecuteResult, Error, BlottoTallyMutation>, "mutationFn">) {
+  return useMutation<ExecuteResult, Error, BlottoTallyMutation>(({
+    client,
+    args: {
+      fee,
+      memo,
+      funds
+    } = {}
+  }) => client.tally(fee, memo, funds), options);
+}
+export interface BlottoStakeMutation {
+  client: BlottoClient;
+  msg: {
+    armyId: number;
+    battlefieldId: number;
+  };
+  args?: {
+    fee?: number | StdFee | "auto";
+    memo?: string;
+    funds?: Coin[];
+  };
+}
+export function useBlottoStakeMutation(options?: Omit<UseMutationOptions<ExecuteResult, Error, BlottoStakeMutation>, "mutationFn">) {
+  return useMutation<ExecuteResult, Error, BlottoStakeMutation>(({
+    client,
+    msg,
+    args: {
+      fee,
+      memo,
+      funds
+    } = {}
+  }) => client.stake(msg, fee, memo, funds), options);
 }

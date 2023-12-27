@@ -19,6 +19,7 @@ import {
   Button,
   useColorModeValue,
   useColorMode,
+  Box,
 } from "@chakra-ui/react";
 
 import { NavBar } from "../components/navbar";
@@ -35,56 +36,53 @@ import {
   Config,
   PlayerInfoResponse,
   StakeInfo,
+  GamePhase,
 } from "../codegen/Blotto.types";
 import { coin } from "@cosmjs/stargate";
 
 const BattleBar = (args: any) => {
-  let red = args.red;
-  let blue = args.blue;
-
-  // TODO probably a better way to handle this bar
-  let redWidth;
-  let blueWidth;
-  switch (true) {
-    // TODO this is broken
-    // Red is not zero but blue is, full red
-    case red !== "0" && blue === "0":
-      redWidth = "100%";
-      blueWidth = "100%";
-      break;
-    // blue is not zero but red is, full blue
-    case red === "0" && blue !== "0":
-      redWidth = "0%";
-      blueWidth = "100%";
-      break;
-    // TODO this is probably very wrong
-    // Neither are zero, find the ratio of red to blue
-    case red !== "0" && blue !== "0":
-      redWidth = `${Math.floor(((red / blue) * 100) / 2)}%`;
-      blueWidth = `${Math.floor(((blue / red) * 100) / 2)}%`;
-      break;
-    // Default to equal width
-    default:
-      redWidth = "50%";
-      blueWidth = "100%";
-  }
+  let red = parseFloat(args.red);
+  let blue = parseFloat(args.blue);
+  let total = red + blue;
+  let redness = (red * 100) / total;
+  let blueness = (blue * 100) / total;
 
   return (
     <div
       className="Widget"
-      style={{ background: "#6060f0", width: blueWidth, color: "white" }}
+      style={{
+        background: "black",
+        width: "100%",
+        position: "relative",
+      }}
     >
       <div
         style={{
           background: "#f06060",
-          width: redWidth,
+          position: "absolute",
+          left: "0px",
+          width: `${redness}%`,
           display: "inline-block",
+          overflow: "hidden",
           color: "white",
         }}
       >
         {red}
-      </div>{" "}
-      {blue}
+      </div>
+      <div
+        style={{
+          background: "#6060f0",
+          position: "absolute",
+          left: `${redness}%`,
+          width: `${blueness}%`,
+          display: "inline-block",
+          overflow: "hidden",
+          color: "white",
+          direction: "rtl",
+        }}
+      >
+        <Box whiteSpace="nowrap">{blue}</Box>
+      </div>
     </div>
   );
 };
@@ -211,6 +209,12 @@ export default function Home() {
   const [config, setConfig] = useState<Config>();
   const [blotto, setBlotto] = useState<BlottoClient>();
   const [playerInfo, setPlayerInfo] = useState<PlayerInfoResponse>();
+  const [gamePhase, setGamePhase] = useState<string | undefined>(undefined);
+  const [tally, setTally] = useState<any>({
+    winner_name: "nobody",
+    winner_id: "0",
+    prize_pool: "0",
+  });
 
   // TODO do this properly with chakra UI themes, or switch UI framework
   // Hack to force dark mode
@@ -256,20 +260,81 @@ export default function Home() {
       setConfig(await blotto.config());
       setArmies(await blotto.armies());
       setBattlefields(await blotto.battlefields());
-      if (context.address)
+      const results = await blotto.status();
+      setGamePhase(results.game_phase);
+      if (context.address) {
         setPlayerInfo(await blotto.playerInfo({ player: context.address }));
+      }
+      /* nope - tally costs money - we can't do this.
+      try {
+        setTally(await blotto.tally());
+      } catch(e) {
+        console.error("Cannot tally ",e);
+      }
+      */
     };
     getData();
   }, [context]);
+
+  // TODO Show Current Game Phase in a more pretty way
+
+  // TODO show total - also show this prior to end of play
 
   // TODO show countdown with how much time is left
 
   // TODO show staked totals for each army (armies query already has the total)
 
+  // uh... why divide by 100000 ? @todo
+  let end: any = new Date();
+  if (config && config.start)
+    end.setTime(
+      (parseInt(config.start) + parseInt(config.battle_duration)) / 1000000
+    );
+  end = end.toLocaleDateString("en-US");
+
+  if (gamePhase == "closed" || gamePhase == "not_started") {
+    return (
+      <Container maxW="3xl" py={10}>
+        <Head>
+          <title>Blotto : {gamePhase}</title>
+          <meta name="description" content="Blotto on chain" />
+          <link rel="icon" href="/favicon.ico" />
+        </Head>
+        <NavBar></NavBar>
+        <br />
+
+        <Center>
+          <ContractsProvider
+            contractsConfig={{
+              address: context.address,
+              getCosmWasmClient: context.getCosmWasmClient,
+              getSigningCosmWasmClient: context.getSigningCosmWasmClient,
+            }}
+          >
+            <VStack>
+              <Text fontFamily={"kablammo"} fontSize={"64"}>
+                GAME PHASE IS CLOSED
+                <br />
+                WINNER IS {tally.winner_name + ""}
+                <br />
+                PRIZE {tally.prize_pool + ""}
+              </Text>
+            </VStack>
+          </ContractsProvider>
+        </Center>
+      </Container>
+    );
+  }
+
   return (
     <Container maxW="3xl" py={10}>
       <Head>
-        <title>Blotto</title>
+        {gamePhase ? (
+          <title>Blotto : {gamePhase}</title>
+        ) : (
+          <title>Blotto</title>
+        )}
+
         <meta name="description" content="Blotto on chain" />
         <link rel="icon" href="/favicon.ico" />
       </Head>
@@ -286,6 +351,10 @@ export default function Home() {
           }}
         >
           <VStack>
+            <Text fontFamily={"kablammo"} fontSize={"64"}>
+              GAME PHASE IS OPEN TILL {end}
+            </Text>
+
             {battlefields.map((entry, key) => (
               <BattleCard
                 key={key}
