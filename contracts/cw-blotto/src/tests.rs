@@ -556,6 +556,8 @@ fn test_battlefield_tie() {
             ],
             battle_duration: Timestamp::from_seconds(10000),
             denom: DENOM.to_string(),
+            staking_limit_config: None,
+            start_time: None,
         })
         .with_label("cw-blotto contract")
         .call(CREATOR)
@@ -794,6 +796,8 @@ fn test_game_tie_diff_stakes() {
             ],
             battle_duration: Timestamp::from_seconds(10000),
             denom: DENOM.to_string(),
+            staking_limit_config: None,
+            start_time: None,
         })
         .with_label("cw-blotto contract")
         .call(CREATOR)
@@ -842,10 +846,10 @@ fn test_game_tie_diff_stakes() {
     assert_eq!("100".to_string(), res.events[1].attributes[2].value);
 
     let res = blotto.withdraw().call(PLAYER_2).unwrap();
-    assert_eq!("0".to_string(), res.events[1].attributes[2].value);
+    assert_eq!("50".to_string(), res.events[1].attributes[2].value);
 
     let res = blotto.withdraw().call(PLAYER_3).unwrap();
-    assert_eq!("0".to_string(), res.events[1].attributes[2].value);
+    assert_eq!("50".to_string(), res.events[1].attributes[2].value);
 
     let res = blotto.withdraw().call(PLAYER_4).unwrap();
     assert_eq!("100".to_string(), res.events[1].attributes[2].value);

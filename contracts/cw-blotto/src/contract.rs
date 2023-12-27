@@ -1,5 +1,3 @@
-use std::collections::HashSet;
-
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, BankMsg, Coin, Order, Response, StdResult, Timestamp, Uint128};
 use cw_storage_plus::{IndexedMap, Item, Map, MultiIndex};
@@ -12,6 +10,7 @@ use crate::state::{
     army_idx, battlefield_id_idx, player_idx, Army, ArmyInfo, Battlefield, BattlefieldInfo, Config,
     GamePhase, StakeIndexes, StakeInfo, StakingLimitConfig, StakingLimitInfo,
 };
+use crate::utils::find_max_with_duplicates;
 use crate::ContractError;
 
 // Version info for migration
@@ -393,72 +392,66 @@ impl BlottoContract<'_> {
             let battlefield_id = bf.1.id;
 
             // Get all army stakes for battlefield
-            let mut army_totals: Vec<(u8, Uint128)> = self
+            let army_totals: Vec<(u8, Uint128)> = self
                 .army_totals_by_battlefield
                 .prefix(battlefield_id)
                 .range(ctx.deps.storage, None, None, Order::Descending)
                 .flatten()
                 .collect();
 
-            // Sort army total stakes by staked amount, last item will be the winner
-            army_totals.sort_by(|a, b| a.1.cmp(&b.1));
+            // Get max with duplicates
+            if let Some((winner, is_duplicated)) =
+                find_max_with_duplicates(army_totals.iter(), |&(_, value)| value)
+            {
+                // If there is a tie we skip the rest - no victory points & prize pool added
+                if is_duplicated {
+                    continue;
+                }
 
-            // Check for tie on staked amounts
-            let mut unique_stakes = HashSet::new();
-            let is_tie = !army_totals
-                .iter()
-                .all(|(_, stake)| unique_stakes.insert(stake.to_string()));
-            println!("unique stakes: {:?}, is tie: {}", unique_stakes, is_tie);
+                println!("totals: {:?}", army_totals);
+                println!("winning army: {:?}", winner);
 
-            // If there is a tie we skip the rest - no victory points & prize pool added
-            if is_tie {
-                continue;
-            }
+                // Remove winning army from totals, the sum the rest and add it to the prize pool
+                let dead_stake: Uint128 = army_totals
+                    .iter()
+                    .map(|a| a.1)
+                    .sum::<Uint128>()
+                    .checked_sub(winner.1)?;
+                prize_pool = prize_pool.checked_add(dead_stake)?;
 
-            // Determine which army won: split_last returns the last element
-            // and the rest of the vector.
-            let (winner, dead) = army_totals
-                .split_last()
-                .ok_or(ContractError::InvalidArmyTotals {})?;
-            println!("totals: {:?}", army_totals);
-            println!("winning army: {:?}", winner);
+                println!("DEAD: {:?}", dead_stake);
 
-            // Remove winning army from totals, the sum the rest and add it to the prize pool
-            let dead_stake: Uint128 = dead.iter().map(|a| a.1).sum();
-            prize_pool = prize_pool.checked_add(dead_stake)?;
-
-            println!("DEAD: {:?}", dead_stake);
-
-            // Add up victory points for that army
-            self.armies.update(
-                ctx.deps.storage,
-                winner.0,
-                |a| -> Result<Army, ContractError> {
-                    match a {
-                        Some(a) => {
-                            let victory_points = a
-                                .victory_points
-                                .checked_add(bf.1.value)
-                                .ok_or(ContractError::InvalidVictoryPointsCalc { id: winner.0 })?;
-                            Ok(Army {
-                                victory_points,
-                                ..a
-                            })
+                // Add up victory points for that army
+                self.armies.update(
+                    ctx.deps.storage,
+                    winner.0,
+                    |a| -> Result<Army, ContractError> {
+                        match a {
+                            Some(a) => {
+                                let victory_points =
+                                    a.victory_points.checked_add(bf.1.value).ok_or(
+                                        ContractError::InvalidVictoryPointsCalc { id: winner.0 },
+                                    )?;
+                                Ok(Army {
+                                    victory_points,
+                                    ..a
+                                })
+                            }
+                            None => Err(ContractError::NoArmy { id: winner.0 }),
                         }
-                        None => Err(ContractError::NoArmy { id: winner.0 }),
-                    }
-                },
-            )?;
+                    },
+                )?;
 
-            // Save battlefield with the winner
-            self.battlefields.save(
-                ctx.deps.storage,
-                battlefield_id,
-                &Battlefield {
-                    winner: Some(winner.0),
-                    ..bf.1
-                },
-            )?;
+                // Save battlefield with the winner
+                self.battlefields.save(
+                    ctx.deps.storage,
+                    battlefield_id,
+                    &Battlefield {
+                        winner: Some(winner.0),
+                        ..bf.1
+                    },
+                )?;
+            }
         }
 
         // Determine overall winner
@@ -470,37 +463,26 @@ impl BlottoContract<'_> {
             .collect::<Result<Vec<_>, _>>()?;
         println!("armies: {:?}", armies);
 
-        // Sort it by number of victory points
-        let game_winner = armies
-            .iter()
-            .max_by_key(|army| army.victory_points)
-            .ok_or(ContractError::InvalidGameWinnerDetermination {})?;
-        println!("game winner: {:?}", game_winner);
-
-        // Check on duplicated max points
-        let is_duplicated = armies
-            .iter()
-            .filter(|army| army.victory_points == game_winner.victory_points)
-            .count()
-            > 1;
-        println!("is duplicated: {}", is_duplicated);
-
         // Response attributes
         let mut attrs = vec![("action", "tally".to_string())];
 
         // If we have a game winner we can save winner and prize pool and set additional response attributes
         // If there are no victory points we assume a game tie happened as bf ended with a tie
         // If there are two duplicated max victory points entries we assume a game tie happened
-        if game_winner.victory_points > 0 && !is_duplicated {
-            self.winner.save(ctx.deps.storage, game_winner)?;
+        if let Some((game_winner, is_duplicated)) =
+            find_max_with_duplicates(armies.iter(), |&x| x.victory_points)
+        {
+            if game_winner.victory_points > 0 && !is_duplicated {
+                self.winner.save(ctx.deps.storage, game_winner)?;
 
-            // Save the prize pool amount for the winning army
-            self.prize_pool.save(ctx.deps.storage, &prize_pool)?;
-            println!("prize pool: {}", prize_pool);
+                // Save the prize pool amount for the winning army
+                self.prize_pool.save(ctx.deps.storage, &prize_pool)?;
+                println!("prize pool: {}", prize_pool);
 
-            attrs.push(("winner_name", game_winner.name.clone()));
-            attrs.push(("winner_id", game_winner.id.to_string()));
-            attrs.push(("prize_pool", prize_pool.to_string()));
+                attrs.push(("winner_name", game_winner.name.clone()));
+                attrs.push(("winner_id", game_winner.id.to_string()));
+                attrs.push(("prize_pool", prize_pool.to_string()));
+            }
         }
 
         Ok(Response::new().add_attributes(attrs))
@@ -533,54 +515,64 @@ impl BlottoContract<'_> {
             return Err(ContractError::NothingToClaim {});
         }
 
-        for stake in stakes {
-            let bf = self
-                .battlefields
-                .load(ctx.deps.storage, stake.1.battlefield_id)?;
-            match bf.winner {
-                Some(winner) => {
-                    // Check if staked with the winning army, if so they can withdraw the staked balance
-                    if winner == stake.1.army {
-                        withdraw_amount = withdraw_amount.checked_add(stake.1.amount)?;
-                    }
-
-                    // Remove stake so player can't call twice and to save space
-                    self.stakes
-                        .remove(ctx.deps.storage, (stake.1.army, bf.id, &ctx.info.sender))?;
-                }
-                // Handle tie
-                None => {
-                    withdraw_amount = withdraw_amount.checked_add(stake.1.amount)?;
-                }
-            }
-        }
-
         // Load game winner
         // If a game ended with a tie there is no winner entry stored
-        let game_winner = self.winner.may_load(ctx.deps.storage)?;
-        if let Some(game_winner) = game_winner {
-            // Load the prize pool
-            let prize_pool = self.prize_pool.load(ctx.deps.storage)?;
+        match self.winner.may_load(ctx.deps.storage)? {
+            Some(game_winner) => {
+                for stake in stakes {
+                    let bf = self
+                        .battlefields
+                        .load(ctx.deps.storage, stake.1.battlefield_id)?;
+                    match bf.winner {
+                        Some(winner) => {
+                            // Check if staked with the winning army, if so they can withdraw the staked balance
+                            if winner == stake.1.army {
+                                withdraw_amount = withdraw_amount.checked_add(stake.1.amount)?;
+                            }
 
-            // Load the total amount the player staked to the winning army
-            let players_stake = self
-                .player_totals_by_army
-                .may_load(ctx.deps.storage, (&ctx.info.sender, game_winner.id))?;
+                            // Remove stake so player can't call twice and to save space
+                            self.stakes.remove(
+                                ctx.deps.storage,
+                                (stake.1.army, bf.id, &ctx.info.sender),
+                            )?;
+                        }
+                        // Handle tie
+                        None => {
+                            withdraw_amount = withdraw_amount.checked_add(stake.1.amount)?;
+                        }
+                    }
+                }
 
-            println!("players_stake: {:?}", players_stake);
+                // Load the prize pool
+                let prize_pool = self.prize_pool.load(ctx.deps.storage)?;
 
-            if let Some(players_stake) = players_stake {
-                // TODO this math may have edge cases?
-                // Calculate players share of the prize pool
-                // players stake * prize pool / total staked on winning army
-                let winnings = players_stake
-                    .checked_mul(prize_pool)?
-                    .checked_div(game_winner.total_staked)?;
+                // Load the total amount the player staked to the winning army
+                let players_stake = self
+                    .player_totals_by_army
+                    .may_load(ctx.deps.storage, (&ctx.info.sender, game_winner.id))?;
 
-                // Add player's share of the prize pool to the withdraw_amount
-                withdraw_amount = withdraw_amount.checked_add(winnings)?;
+                println!("players_stake: {:?}", players_stake);
+
+                if let Some(players_stake) = players_stake {
+                    // TODO this math may have edge cases?
+                    // Calculate players share of the prize pool
+                    // players stake * prize pool / total staked on winning army
+                    let winnings = players_stake
+                        .checked_mul(prize_pool)?
+                        .checked_div(game_winner.total_staked)?;
+
+                    // Add player's share of the prize pool to the withdraw_amount
+                    withdraw_amount = withdraw_amount.checked_add(winnings)?;
+                }
             }
-        }
+            None => {
+                let total_stake: Uint128 = stakes.iter().map(|x| x.1.amount).sum();
+
+                println!("players_total_stake: {:?}", total_stake);
+
+                withdraw_amount = total_stake;
+            }
+        };
 
         let mut resp = Response::new()
             .add_attribute("action", "withdraw")
