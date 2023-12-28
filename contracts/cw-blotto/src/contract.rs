@@ -408,9 +408,6 @@ impl BlottoContract<'_> {
                     continue;
                 }
 
-                println!("totals: {:?}", army_totals);
-                println!("winning army: {:?}", winner);
-
                 // Remove winning army from totals, the sum the rest and add it to the prize pool
                 let dead_stake: Uint128 = army_totals
                     .iter()
@@ -418,8 +415,6 @@ impl BlottoContract<'_> {
                     .sum::<Uint128>()
                     .checked_sub(winner.1)?;
                 prize_pool = prize_pool.checked_add(dead_stake)?;
-
-                println!("DEAD: {:?}", dead_stake);
 
                 // Add up victory points for that army
                 self.armies.update(
@@ -461,7 +456,6 @@ impl BlottoContract<'_> {
             .range(ctx.deps.storage, None, None, Order::Descending)
             .map(|res| res.map(|(_, army)| army))
             .collect::<Result<Vec<_>, _>>()?;
-        println!("armies: {:?}", armies);
 
         // Response attributes
         let mut attrs = vec![("action", "tally".to_string())];
@@ -477,7 +471,6 @@ impl BlottoContract<'_> {
 
                 // Save the prize pool amount for the winning army
                 self.prize_pool.save(ctx.deps.storage, &prize_pool)?;
-                println!("prize pool: {}", prize_pool);
 
                 attrs.push(("winner_name", game_winner.name.clone()));
                 attrs.push(("winner_id", game_winner.id.to_string()));
@@ -551,8 +544,6 @@ impl BlottoContract<'_> {
                     .player_totals_by_army
                     .may_load(ctx.deps.storage, (&ctx.info.sender, game_winner.id))?;
 
-                println!("players_stake: {:?}", players_stake);
-
                 if let Some(players_stake) = players_stake {
                     // TODO this math may have edge cases?
                     // Calculate players share of the prize pool
@@ -567,8 +558,6 @@ impl BlottoContract<'_> {
             }
             None => {
                 let total_stake: Uint128 = stakes.iter().map(|x| x.1.amount).sum();
-
-                println!("players_total_stake: {:?}", total_stake);
 
                 withdraw_amount = total_stake;
             }
