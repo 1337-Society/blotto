@@ -1,4 +1,4 @@
-use std::cmp::Ord;
+use std::cmp::{Ord, Ordering};
 
 pub fn find_max_with_duplicates<T, I, F, K>(iter: I, mut key_extractor: F) -> Option<(T, bool)>
 where
@@ -14,15 +14,17 @@ where
     for item in iter {
         let key = key_extractor(&item);
         match max_key.as_ref() {
-            Some(current_max) => {
-                if key > *current_max {
+            Some(current_max) => match key.cmp(current_max) {
+                Ordering::Greater => {
                     max_key = Some(key);
                     max_item = Some(item.clone());
                     count = 1;
-                } else if key == *current_max {
+                }
+                Ordering::Equal => {
                     count += 1;
                 }
-            }
+                Ordering::Less => {}
+            },
             None => {
                 max_key = Some(key);
                 max_item = Some(item.clone());
