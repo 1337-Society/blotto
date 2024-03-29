@@ -1,28 +1,8 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 
 import Head from "next/head";
-
-import {
-  Heading,
-  Text,
-  Stack,
-  VStack,
-  Center,
-  Card,
-  CardBody,
-  CardFooter,
-  Container,
-  Image,
-  Link,
-  Button,
-  useColorModeValue,
-  useColorMode,
-  Box,
-} from "@chakra-ui/react";
-
-import { NavBar } from "../components/navbar";
 
 import { useChain } from "@cosmos-kit/react";
 
@@ -38,170 +18,8 @@ import {
   StakeInfo,
   GamePhase,
 } from "../codegen/Blotto.types";
-import { coin } from "@cosmjs/stargate";
-
-const BattleBar = (args: any) => {
-  let red = parseFloat(args.red);
-  let blue = parseFloat(args.blue);
-  let total = red + blue;
-  let redness = (red * 100) / total;
-  let blueness = (blue * 100) / total;
-
-  return (
-    <div
-      className="Widget"
-      style={{
-        background: "black",
-        width: "100%",
-        position: "relative",
-      }}
-    >
-      <div
-        style={{
-          background: "#f06060",
-          position: "absolute",
-          left: "0px",
-          width: `${redness}%`,
-          display: "inline-block",
-          overflow: "hidden",
-          color: "white",
-        }}
-      >
-        {red}
-      </div>
-      <div
-        style={{
-          background: "#6060f0",
-          position: "absolute",
-          left: `${redness}%`,
-          width: `${blueness}%`,
-          display: "inline-block",
-          overflow: "hidden",
-          color: "white",
-          direction: "rtl",
-        }}
-      >
-        <Box whiteSpace="nowrap">{blue}</Box>
-      </div>
-    </div>
-  );
-};
-
-const BattleCard = (args: any) => {
-  const battle: Battlefield = args.battle;
-  const blotto: BlottoClient = args.blotto;
-  const config: Config = args.config;
-  let playerInfo = args.player;
-
-  const [playerStake, setPlayerStake] = useState<StakeInfo>();
-
-  let [blueTotal, setBlueTotal] = useState("0");
-  let [redTotal, setRedTotal] = useState("0");
-
-  useEffect(() => {
-    let getData = async () => {
-      // Get total staked amount on battlefield for red
-      setRedTotal(
-        await blotto.armyTotalsByBattlefield({
-          armyId: 1,
-          battlefieldId: battle.id,
-        })
-      );
-
-      // Get total staked amount on battlefield for blue
-      setBlueTotal(
-        await blotto.armyTotalsByBattlefield({
-          armyId: 2,
-          battlefieldId: battle.id,
-        })
-      );
-    };
-    getData();
-
-    if (playerInfo) {
-      let stakes = playerInfo.stakes;
-      for (let i in stakes) {
-        if (stakes[i].battlefield_id === battle.id) {
-          setPlayerStake(stakes[i]);
-        }
-      }
-    }
-  }, [playerInfo, battle, blotto]);
-
-  // TODO UI to handle getting amount
-  const stake = async (armyId: number, battlefieldId: number) => {
-    let res = await blotto.stake({ armyId, battlefieldId }, "auto", "", [
-      coin("100", config.denom),
-    ]);
-    console.log(res);
-    // TODO refresh data on tx
-  };
-
-  return (
-    <Card
-      direction={{ base: "column", sm: "row" }}
-      overflow="hidden"
-      variant="outline"
-      borderRadius={5}
-      boxShadow={useColorModeValue(
-        "0 2px 5px #ccc",
-        "0 1px 3px #727272, 0 2px 12px -2px #2f2f2f"
-      )}
-      _hover={{
-        color: useColorModeValue("purple.600", "purple.300"),
-        boxShadow: useColorModeValue(
-          "0 2px 5px #bca5e9",
-          "0 0 3px rgba(150, 75, 213, 0.8), 0 3px 8px -2px rgba(175, 89, 246, 0.9)"
-        ),
-      }}
-    >
-      <Stack>
-        <CardBody>
-          <Heading size="md">{battle.name || ""}</Heading>
-          <Text py="3">Victory points: {battle.value || 0}</Text>
-          <Text py="3">{battle.description}</Text>
-          {playerStake && (
-            <Text py="3">
-              Your Stake: {playerStake.amount} on{" "}
-              {playerStake.army === 1 ? "red" : "blue"}
-            </Text>
-          )}
-        </CardBody>
-
-        <CardBody>
-          <BattleBar red={redTotal} blue={blueTotal}></BattleBar>
-        </CardBody>
-
-        <CardFooter>
-          <Button
-            variant="solid"
-            colorScheme="red"
-            onClick={() => stake(1, battle.id)}
-          >
-            Stake Red Soldiers
-          </Button>
-          &nbsp;
-          <Button
-            variant="solid"
-            colorScheme="blue"
-            onClick={() => stake(2, battle.id)}
-          >
-            Stake Blue Soldiers
-          </Button>
-        </CardFooter>
-      </Stack>
-
-      <Image
-        objectFit="cover"
-        maxW={{ base: "100%", sm: "200px" }}
-        src={battle.image_uri || ""}
-        alt={battle.name || ""}
-      />
-    </Card>
-  );
-};
-
-let latch = false;
+import BattleCard from "../components/BattleCard";
+import NavBar from "../components/NavBar";
 
 export default function Home() {
   const [armies, setArmies] = useState<Army[]>([]);
@@ -215,25 +33,13 @@ export default function Home() {
     winner_id: "0",
     prize_pool: "0",
   });
+  const [winner, setWinner] = useState<Army>();
 
-  // TODO do this properly with chakra UI themes, or switch UI framework
-  // Hack to force dark mode
-  const { colorMode, toggleColorMode } = useColorMode();
-  if (typeof window !== "undefined") {
-    if (colorMode === "light") {
-      toggleColorMode();
-    }
-  }
-
-  // Get someting called a context which appears to be something around a current user and a chain
   const context = useChain(chainName);
 
   useEffect(() => {
-    if (latch) return;
     let getData = async () => {
-      let cli: any = null;
-
-      cli =
+      const cli =
         context.status != "Connected"
           ? await context.getCosmWasmClient()
           : await context.getSigningCosmWasmClient();
@@ -247,10 +53,6 @@ export default function Home() {
         context.status
       );
 
-      // rather than issuing a useEffect({fn,[]}) once I'd like to have the child components have a connected wallet ...
-      // this is kind of clumsy @todo improve
-      latch = context.address ? true : false;
-
       let blotto = new BlottoClient(
         cli,
         context && context.address ? context.address : "invalid",
@@ -262,19 +64,27 @@ export default function Home() {
       setBattlefields(await blotto.battlefields());
       const results = await blotto.status();
       setGamePhase(results.game_phase);
+      if (gamePhase == "closed") {
+        setWinner(results.winner);
+      }
       if (context.address) {
         setPlayerInfo(await blotto.playerInfo({ player: context.address }));
       }
-      /* nope - tally costs money - we can't do this.
-      try {
-        setTally(await blotto.tally());
-      } catch(e) {
-        console.error("Cannot tally ",e);
-      }
-      */
     };
     getData();
-  }, [context]);
+  }, []);
+
+  const handleTally = async () => {
+    try {
+      setTally(await blotto.tally());
+    } catch (e) {
+      console.error("Cannot tally ", e);
+    }
+  };
+
+  const handleWithdraw = async () => {
+    await blotto?.withdraw();
+  };
 
   // TODO Show Current Game Phase in a more pretty way
 
@@ -294,16 +104,15 @@ export default function Home() {
 
   if (gamePhase == "closed" || gamePhase == "not_started") {
     return (
-      <Container maxW="3xl" py={10}>
+      <div>
         <Head>
           <title>Blotto : {gamePhase}</title>
           <meta name="description" content="Blotto on chain" />
           <link rel="icon" href="/favicon.ico" />
         </Head>
-        <NavBar></NavBar>
         <br />
 
-        <Center>
+        <div>
           <ContractsProvider
             contractsConfig={{
               address: context.address,
@@ -311,23 +120,30 @@ export default function Home() {
               getSigningCosmWasmClient: context.getSigningCosmWasmClient,
             }}
           >
-            <VStack>
-              <Text fontFamily={"kablammo"} fontSize={"64"}>
+            <div>
+              <h2>
                 GAME PHASE IS CLOSED
                 <br />
-                WINNER IS {tally.winner_name + ""}
+                WINNER IS {winner.name + ""}
                 <br />
                 PRIZE {tally.prize_pool + ""}
-              </Text>
-            </VStack>
+              </h2>
+              <button
+                type="button"
+                className="focus:outline-none text-white bg-red-700 hover:bg-red-800 focus:ring-4 focus:ring-red-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-red-900"
+                onClick={handleWithdraw}
+              >
+                Withdraw
+              </button>
+            </div>
           </ContractsProvider>
-        </Center>
-      </Container>
+        </div>
+      </div>
     );
   }
 
   return (
-    <Container maxW="3xl" py={10}>
+    <div>
       <Head>
         {gamePhase ? (
           <title>Blotto : {gamePhase}</title>
@@ -339,10 +155,21 @@ export default function Home() {
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
-      <NavBar></NavBar>
+      <NavBar context={context} />
+
       <br />
 
-      <Center>
+      {end && (
+        <button
+          type="button"
+          className="focus:outline-none text-white bg-red-700 hover:bg-red-800 focus:ring-4 focus:ring-red-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-red-900"
+          onClick={handleTally}
+        >
+          Tally
+        </button>
+      )}
+
+      <div className="container mx-auto">
         <ContractsProvider
           contractsConfig={{
             address: context.address,
@@ -350,11 +177,8 @@ export default function Home() {
             getSigningCosmWasmClient: context.getSigningCosmWasmClient,
           }}
         >
-          <VStack>
-            <Text fontFamily={"kablammo"} fontSize={"64"}>
-              GAME PHASE IS OPEN TILL {end}
-            </Text>
-
+          {/* <div>GAME PHASE IS OPEN TILL {end}</div> */}
+          <div className="grid grid-cols-3 gap-3">
             {battlefields.map((entry, key) => (
               <BattleCard
                 key={key}
@@ -364,26 +188,9 @@ export default function Home() {
                 player={playerInfo}
               ></BattleCard>
             ))}
-          </VStack>
+          </div>
         </ContractsProvider>
-      </Center>
-
-      <Stack
-        isInline={true}
-        spacing={1}
-        justifyContent="center"
-        opacity={0.5}
-        fontSize="sm"
-      >
-        <Text>Built with</Text>
-        <Link
-          href="https://cosmology.tech/"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Cosmology
-        </Link>
-      </Stack>
-    </Container>
+      </div>
+    </div>
   );
 }
