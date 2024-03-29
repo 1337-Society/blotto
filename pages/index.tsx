@@ -5,7 +5,7 @@ import Head from "next/head";
 import { useChain } from "@cosmos-kit/react";
 import { chainName, blottoContractAddress } from "../config/defaults";
 import { ContractsProvider } from "../codegen/contracts-context";
-import { BlottoClient } from "../codegen/Blotto.client";
+import { BlottoQueryClient } from "../codegen/Blotto.client";
 import {
   Army,
   Battlefield,
@@ -19,7 +19,7 @@ export default function Home() {
   const [armies, setArmies] = useState<Army[]>([]);
   const [battlefields, setBattlefields] = useState<Battlefield[]>([]);
   const [config, setConfig] = useState<Config>();
-  const [blotto, setBlotto] = useState<BlottoClient>();
+  const [blotto, setBlotto] = useState<BlottoQueryClient>();
   const [playerInfo, setPlayerInfo] = useState<PlayerInfoResponse>();
   const [gamePhase, setGamePhase] = useState<string | undefined>(undefined);
   const [tally, setTally] = useState<any>({
@@ -33,10 +33,7 @@ export default function Home() {
 
   useEffect(() => {
     let getData = async () => {
-      const cli =
-        context.status != "Connected"
-          ? await context.getCosmWasmClient()
-          : await context.getSigningCosmWasmClient();
+      const cli = await context.getCosmWasmClient();
 
       console.log(
         "address:",
@@ -47,11 +44,7 @@ export default function Home() {
         context.status
       );
 
-      let blotto = new BlottoClient(
-        cli,
-        context && context.address ? context.address : "invalid",
-        blottoContractAddress
-      );
+      let blotto = new BlottoQueryClient(cli, blottoContractAddress);
       setBlotto(blotto);
       setConfig(await blotto.config());
       setArmies(await blotto.armies());
@@ -80,9 +73,12 @@ export default function Home() {
     await blotto?.withdraw();
   };
 
-  // TODO Show Current Game Phase in a more pretty way
+  console.log("config", config);
+  console.log("playerInfo", playerInfo);
+  console.log("battlefields", battlefields);
+  console.log("armies", armies);
 
-  // TODO show total - also show this prior to end of play
+  // TODO Show Current Game Phase in a more pretty way
 
   // TODO show countdown with how much time is left
 
@@ -98,9 +94,17 @@ export default function Home() {
     );
   end = end.toLocaleDateString("en-US");
 
+  let now = new Date();
+
   if (gamePhase == "closed" || gamePhase == "not_started") {
     return (
-      <div>
+      <ContractsProvider
+        contractsConfig={{
+          address: context.address,
+          getCosmWasmClient: context.getCosmWasmClient,
+          getSigningCosmWasmClient: context.getSigningCosmWasmClient,
+        }}
+      >
         <Head>
           <title>Blotto : {gamePhase}</title>
           <meta name="description" content="Blotto on chain" />
@@ -109,37 +113,35 @@ export default function Home() {
         <br />
 
         <div>
-          <ContractsProvider
-            contractsConfig={{
-              address: context.address,
-              getCosmWasmClient: context.getCosmWasmClient,
-              getSigningCosmWasmClient: context.getSigningCosmWasmClient,
-            }}
-          >
-            <div>
-              <h2>
-                GAME PHASE IS CLOSED
-                <br />
-                WINNER IS {winner.name + ""}
-                <br />
-                PRIZE {tally.prize_pool + ""}
-              </h2>
-              <button
-                type="button"
-                className="focus:outline-none text-white bg-red-700 hover:bg-red-800 focus:ring-4 focus:ring-red-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-red-900"
-                onClick={handleWithdraw}
-              >
-                Withdraw
-              </button>
-            </div>
-          </ContractsProvider>
+          <div>
+            <h2>
+              GAME PHASE IS CLOSED
+              <br />
+              WINNER IS {winner.name + ""}
+              <br />
+              PRIZE {tally.prize_pool + ""}
+            </h2>
+            <button
+              type="button"
+              className="focus:outline-none text-white bg-red-700 hover:bg-red-800 focus:ring-4 focus:ring-red-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-red-900"
+              onClick={handleWithdraw}
+            >
+              Withdraw
+            </button>
+          </div>
         </div>
-      </div>
+      </ContractsProvider>
     );
   }
 
   return (
-    <div>
+    <ContractsProvider
+      contractsConfig={{
+        address: context.address,
+        getCosmWasmClient: context.getCosmWasmClient,
+        getSigningCosmWasmClient: context.getSigningCosmWasmClient,
+      }}
+    >
       <Head>
         {gamePhase ? (
           <title>Blotto : {gamePhase}</title>
@@ -155,7 +157,7 @@ export default function Home() {
 
       <br />
 
-      {end && (
+      {end > now && (
         <button
           type="button"
           className="focus:outline-none text-white bg-red-700 hover:bg-red-800 focus:ring-4 focus:ring-red-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-red-900"
@@ -166,27 +168,18 @@ export default function Home() {
       )}
 
       <div className="container mx-auto">
-        <ContractsProvider
-          contractsConfig={{
-            address: context.address,
-            getCosmWasmClient: context.getCosmWasmClient,
-            getSigningCosmWasmClient: context.getSigningCosmWasmClient,
-          }}
-        >
-          {/* <div>GAME PHASE IS OPEN TILL {end}</div> */}
-          <div className="grid grid-cols-3 gap-3">
-            {battlefields.map((entry, key) => (
-              <BattleCard
-                key={key}
-                battle={entry}
-                blotto={blotto}
-                config={config}
-                player={playerInfo}
-              ></BattleCard>
-            ))}
-          </div>
-        </ContractsProvider>
+        {/* <div>GAME PHASE IS OPEN TILL {end}</div> */}
+        <div className="grid grid-cols-3 gap-3">
+          {battlefields.map((entry, key) => (
+            <BattleCard
+              key={key}
+              battle={entry}
+              config={config}
+              player={playerInfo}
+            ></BattleCard>
+          ))}
+        </div>
       </div>
-    </div>
+    </ContractsProvider>
   );
 }

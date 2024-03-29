@@ -581,8 +581,6 @@ impl BlottoContract<'_> {
         Ok(resp)
     }
 
-    // TODO query current staked totals for a battlefield
-
     /// Returns a list of armies
     #[msg(query)]
     pub fn armies(&self, ctx: QueryCtx) -> StdResult<Vec<Army>> {

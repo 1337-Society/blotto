@@ -10,10 +10,11 @@ import {
   GamePhase,
 } from "../codegen/Blotto.types";
 import BattleBar from "./BattleBar";
+import { useContracts } from "../codegen/contracts-context";
+import { blottoContractAddress } from "../config";
 
 export default function BattleCard(args: any) {
   const battle: Battlefield = args.battle;
-  const blotto: BlottoClient = args.blotto;
   const config: Config = args.config;
   let playerInfo = args.player;
 
@@ -22,8 +23,12 @@ export default function BattleCard(args: any) {
   let [blueTotal, setBlueTotal] = useState("0");
   let [redTotal, setRedTotal] = useState("0");
 
+  const contracts = useContracts();
+
   useEffect(() => {
     let getData = async () => {
+      const blotto = contracts.blotto.getQueryClient(blottoContractAddress);
+
       // Get total staked amount on battlefield for red
       setRedTotal(
         await blotto.armyTotalsByBattlefield({
@@ -50,10 +55,11 @@ export default function BattleCard(args: any) {
         }
       }
     }
-  }, [playerInfo, battle, blotto]);
+  }, [playerInfo, battle, contracts]);
 
   // TODO UI to handle getting amount
   const stake = async (armyId: number, battlefieldId: number) => {
+    const blotto = contracts.blotto.getSigningClient(blottoContractAddress);
     let res = await blotto.stake({ armyId, battlefieldId }, "auto", "", [
       coin("100", config.denom),
     ]);
@@ -84,6 +90,8 @@ export default function BattleCard(args: any) {
         <div className="m-5">
           <BattleBar red={redTotal} blue={blueTotal}></BattleBar>
         </div>
+
+        <br />
 
         <div className="flex">
           <button

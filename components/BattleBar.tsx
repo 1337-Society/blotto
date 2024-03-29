@@ -7,7 +7,7 @@ export default function BattleBar(args: any) {
 
   return (
     <div
-      className="Widget"
+      className="flex justify-between mb-1"
       style={{
         background: "black",
         width: "100%",
@@ -19,7 +19,7 @@ export default function BattleBar(args: any) {
           background: "#f06060",
           position: "absolute",
           left: "0px",
-          width: `${redness}%`,
+          width: `${redness || 50}%`,
           display: "inline-block",
           overflow: "hidden",
           color: "white",
@@ -31,8 +31,8 @@ export default function BattleBar(args: any) {
         style={{
           background: "#6060f0",
           position: "absolute",
-          left: `${redness}%`,
-          width: `${blueness}%`,
+          left: `${redness || 50}%`,
+          width: `${blueness || 50}%`,
           display: "inline-block",
           overflow: "hidden",
           color: "white",

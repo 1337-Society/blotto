@@ -1,15 +1,17 @@
 import "../styles/globals.css";
-import { ChainProvider } from "@cosmos-kit/react";
+import { ChainProvider, useChain } from "@cosmos-kit/react";
 import { wallets as keplrWallets } from "@cosmos-kit/keplr";
 import { wallets as cosmostationWallets } from "@cosmos-kit/cosmostation";
 import { wallets as leapWallets } from "@cosmos-kit/leap";
 import { GasPrice } from "@cosmjs/stargate";
+import { ContractsProvider } from "../codegen/contracts-context";
 
 import { SignerOptions } from "@cosmos-kit/core";
 import { chains, assets } from "chain-registry";
 import "@interchain-ui/react/styles";
 
 import "../styles/globals.css";
+import { chainName } from "../config";
 
 function App(args: any) {
   const Component: any = args.Component;

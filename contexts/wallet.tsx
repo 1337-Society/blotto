@@ -1,6 +1,9 @@
 import type { Chain } from "@chain-registry/types";
-import type { SigningCosmWasmClient } from "@cosmjs/cosmwasm-stargate";
-import type { ChainWalletBase } from "@cosmos-kit/core";
+import type {
+  CosmWasmClient,
+  SigningCosmWasmClient,
+} from "@cosmjs/cosmwasm-stargate";
+import type { ChainContext, ChainWalletBase } from "@cosmos-kit/core";
 import { useChain, useManager } from "@cosmos-kit/react-lite";
 import type { Coin } from "cosmjs-types/cosmos/base/v1beta1/coin";
 import {
@@ -10,48 +13,66 @@ import {
   useEffect,
   useState,
 } from "react";
+import { BlottoClient } from "../codegen/Blotto.client";
 
 import { chainName, blottoContractAddress } from "../config/defaults";
 
-export interface WalletContext {
-  account: any;
-  isConnecting: boolean;
+export interface ClientContext {
   connect: (walletType?: string) => Promise<boolean>;
+  context?: ChainContext;
   disconnect: () => void;
+  signingClient?: SigningCosmWasmClient;
+  cosmwasmClient: CosmWasmClient;
+  blottoClient: BlottoClient;
 }
 
-export const Wallet = createContext<WalletContext>({
-  account: undefined,
-  isConnecting: false,
+export const Client = createContext<ClientContext>({
   connect: () => new Promise(() => {}),
   disconnect: () => {},
 });
 
-export function WalletProvider({ children }: { children: React.ReactNode }) {
-  const [isConnecting, setIsConnecting] = useState<boolean>(false);
-
+export function ClientProvider({ children }: { children: React.ReactNode }) {
   const context = useChain(chainName);
 
   // Check if there are already connected wallets on page load
   useEffect(() => {
-    const currentWallet = localStorage.getItem(
+    const currentClient = localStorage.getItem(
       "cosmos-kit@2:core//current-wallet"
     );
-    if (currentWallet) context.connect(chainName);
+    if (currentClient) context.connect();
   }, []);
 
+  const connect = async () => {
+    context.connect();
+  };
+
+  const disconnect = async () => {
+    context.disconnect();
+  };
+
+  const getClient = async () => {};
+
+  const getBlottoClient = async () => {
+    let cli = await context.getSigningCosmWasmClient();
+
+    return new BlottoClient(
+      cli,
+      context && context.address ? context.address : "invalid",
+      blottoContractAddress
+    );
+  };
+
   return (
-    <Wallet.Provider
+    <Client.Provider
       value={{
-        account,
-        isConnecting,
+        context,
         connect,
         disconnect,
       }}
     >
       {children}
-    </Wallet.Provider>
+    </Client.Provider>
   );
 }
 
-export const useWallet = (): WalletContext => useContext(Wallet);
+export const useClient = (): ClientContext => useContext(Client);
