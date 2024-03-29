@@ -652,6 +652,11 @@ impl BlottoContract<'_> {
         Ok(PlayerInfoResponse { stakes })
     }
 
+    #[msg(query)]
+    pub fn prize_pool(&self, ctx: QueryCtx) -> StdResult<Option<Uint128>> {
+        self.prize_pool.may_load(ctx.deps.storage)
+    }
+
     /// Returns information about the game status
     #[msg(query)]
     pub fn status(&self, ctx: QueryCtx) -> StdResult<StatusResponse> {

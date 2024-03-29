@@ -1,13 +1,9 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
-
+import React, { useState, useEffect } from "react";
 import Head from "next/head";
-
 import { useChain } from "@cosmos-kit/react";
-
 import { chainName, blottoContractAddress } from "../config/defaults";
-
 import { ContractsProvider } from "../codegen/contracts-context";
 import { BlottoClient } from "../codegen/Blotto.client";
 import {
@@ -15,8 +11,6 @@ import {
   Battlefield,
   Config,
   PlayerInfoResponse,
-  StakeInfo,
-  GamePhase,
 } from "../codegen/Blotto.types";
 import BattleCard from "../components/BattleCard";
 import NavBar from "../components/NavBar";
@@ -93,6 +87,8 @@ export default function Home() {
   // TODO show countdown with how much time is left
 
   // TODO show staked totals for each army (armies query already has the total)
+
+  // TODO show more player info
 
   // uh... why divide by 100000 ? @todo
   let end: any = new Date();
